@@ -1,0 +1,1 @@
+5,35 * * * * /usr/sbin/logrotate /etc/logrotate.d/nginx >> /var/log/cron.log 2>&1

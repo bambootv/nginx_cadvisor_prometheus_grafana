@@ -10,7 +10,7 @@ RUN wget http://nginx.org/download/nginx-1.21.4.tar.gz && \
     tar -zxvf nginx-1.21.4.tar.gz
 
 # Change to the source directory
-WORKDIR nginx-1.21.4
+WORKDIR /nginx-1.21.4
 
 # Configure and compile Nginx with the stub status module
 RUN ./configure --with-http_stub_status_module && \

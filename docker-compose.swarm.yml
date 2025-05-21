@@ -2,7 +2,7 @@ x-deploy: &deploy_config
   mode: replicated
   replicas: 1
   update_config:
-    parallelism: 2
+    parallelism: 1
     order: start-first
     failure_action: rollback
     delay: 5s
@@ -70,6 +70,10 @@ services:
 
   prometheus:
     image: prom/prometheus:v2.53.0
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.retention.time=7d"
+      - "--storage.tsdb.retention.size=2GB"
     volumes:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - prometheus_data:/prometheus

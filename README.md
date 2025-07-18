@@ -23,8 +23,8 @@
 ```bash
   apt install make
 
-  cp nginx/nginx_sites_available.example nginx/nginx
   cp nginx/logrotate.conf.example nginx/logrotate.conf
+  cp nginx/nginx_sites_available.example nginx/nginx_sites_available
 
   make build
   make up

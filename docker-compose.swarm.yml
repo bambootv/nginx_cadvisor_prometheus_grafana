@@ -1,6 +1,6 @@
 x-deploy: &deploy_config
   mode: replicated
-  replicas: 1
+  replicas: ${COMMON_REPLICAS:-1}
   update_config:
     parallelism: 1
     order: start-first
@@ -26,7 +26,22 @@ services:
       - nginx_logs:/var/log/nginx
     networks:
       - monitoring_swarm
-    deploy: *deploy_config
+    deploy:
+      mode: replicated
+      replicas: ${NGINX_REPLICAS:-1}
+      update_config:
+        parallelism: 1
+        order: start-first
+        failure_action: rollback
+        delay: 5s
+      rollback_config:
+        parallelism: 0
+        order: stop-first
+      restart_policy:
+        condition: any
+        delay: 5s
+        max_attempts: 3
+        window: 5s
 
   node_exporter:
     image: prom/node-exporter:latest
@@ -54,6 +69,7 @@ services:
       - nginx_logs:/var/log/nginx:ro
     networks:
       - monitoring_swarm
+    deploy: *deploy_config
 
   cadvisor:
     image: gcr.io/cadvisor/cadvisor:v0.47.0

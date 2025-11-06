@@ -19,13 +19,14 @@ services:
   nginx:
     image: nginx:stub_status
     ports:
-      - "80:80"
+      - "8088:80"
     volumes:
       - ./nginx/nginx.conf:/usr/local/nginx/conf/nginx.conf:ro
       - ./nginx/nginx_sites_available:/etc/nginx/sites-available/default:ro
       - nginx_logs:/var/log/nginx
     networks:
       - monitoring_swarm
+      - shopping_list_network
     deploy:
       mode: replicated
       replicas: ${NGINX_REPLICAS:-1}
@@ -78,7 +79,7 @@ services:
       - /var/run:/var/run:ro
       - /sys:/sys:ro
       - /var/lib/docker/:/var/lib/docker:ro
-      - /dev/disk/:/dev/disk:ro
+      # - /dev/disk/:/dev/disk:ro # Vô hiệu hóa vì không có trên macOS
       - /var/run/docker.sock:/var/run/docker.sock:rw
     networks:
       - monitoring_swarm
@@ -93,6 +94,8 @@ services:
     volumes:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
     networks:
       - monitoring_swarm
     deploy: *deploy_config
@@ -118,3 +121,5 @@ networks:
     ipam:
       config:
         - subnet: 10.0.3.0/24
+  shopping_list_network:
+    external: true

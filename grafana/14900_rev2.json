@@ -624,7 +624,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum_over_time(nginxlog_resp_bytes{instance=~\"$instance*\", resp_code=~\"20.\"}[5m])",
+          "expr": "count_over_time(nginxlog_resp_bytes{resp_code=~\"2..\",agent!~\"Go-http-client.*|Prometheus.*|curl.*|Wget.*|kube-probe.*\",request!~\"/nginx_status|/metrics\"}[5m])",
           "interval": "",
           "legendFormat": "{{request}}",
           "refId": "A"
@@ -713,7 +713,7 @@
       "pluginVersion": "7.0.1",
       "targets": [
         {
-          "expr": "sum_over_time(nginxlog_resp_bytes{instance=~\"$instance*\", resp_code=~\"200\"}[24h])",
+          "expr": "count_over_time(nginxlog_resp_bytes{resp_code=~\"2..\",agent!~\"Go-http-client.*|Prometheus.*|curl.*|Wget.*|kube-probe.*\",request!~\"/nginx_status|/metrics\"}[24h])",
           "interval": "",
           "legendFormat": "{{request}}",
           "refId": "A"
@@ -721,7 +721,7 @@
       ],
       "timeFrom": null,
       "timeShift": null,
-      "title": "Total Response 200 Req. [24h]",
+      "title": "Total Response 2xx Req. [24h]",
       "type": "bargauge"
     },
     {
@@ -774,7 +774,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum_over_time(nginxlog_resp_bytes{instance=~\"$instance*\", resp_code=~\"40.\"}[5m])",
+          "expr": "count_over_time(nginxlog_resp_bytes{instance=~\"$instance*\", resp_code=~\"4..\"}[5m])",
           "interval": "",
           "legendFormat": "{{request}}",
           "refId": "A"
@@ -863,7 +863,7 @@
       "pluginVersion": "7.0.1",
       "targets": [
         {
-          "expr": "sum_over_time(nginxlog_resp_bytes{instance=~\"$instance*\", resp_code=~\"404\"}[5m])",
+          "expr": "count_over_time(nginxlog_resp_bytes{instance=~\"$instance*\", resp_code=~\"404\"}[5m])",
           "interval": "",
           "legendFormat": "{{request}}",
           "refId": "A"
@@ -923,7 +923,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum_over_time(nginxlog_resp_bytes{instance=~\"$instance*\", resp_code=~\"30.\"}[5m])",
+          "expr": "count_over_time(nginxlog_resp_bytes{instance=~\"$instance*\", resp_code=~\"3..\"}[5m])",
           "interval": "",
           "legendFormat": "{{instance}}",
           "refId": "A"
@@ -1021,7 +1021,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum_over_time(nginxlog_resp_bytes{instance=~\"$instance*\", resp_code=~\"50.\"}[5m])",
+          "expr": "count_over_time(nginxlog_resp_bytes{instance=~\"$instance*\", resp_code=~\"5..\"}[5m])",
           "interval": "",
           "legendFormat": "{{instance}}",
           "refId": "A"

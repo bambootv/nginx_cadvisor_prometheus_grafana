@@ -624,7 +624,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "count_over_time(nginxlog_resp_bytes{resp_code=~\"2..\",agent!~\"Go-http-client.*|Prometheus.*|curl.*|Wget.*|kube-probe.*\",request!~\"/nginx_status|/metrics\"}[5m])",
+          "expr": "count_over_time(nginxlog_resp_bytes{instance=~\"$instance\",job=\"$job\",service=\"$service\"resp_code=~\"2..\",agent!~\"Go-http-client.*|Prometheus.*|curl.*|Wget.*|kube-probe.*\",request!~\"/nginx_status|/metrics\"}[5m])",
           "interval": "",
           "legendFormat": "{{request}}",
           "refId": "A"
@@ -713,7 +713,7 @@
       "pluginVersion": "7.0.1",
       "targets": [
         {
-          "expr": "count_over_time(nginxlog_resp_bytes{resp_code=~\"2..\",agent!~\"Go-http-client.*|Prometheus.*|curl.*|Wget.*|kube-probe.*\",request!~\"/nginx_status|/metrics\"}[24h])",
+          "expr": "count_over_time(nginxlog_resp_bytes{instance=\"$instance\",resp_code=~\"2..\",agent!~\"Go-http-client.*|Prometheus.*|curl.*|Wget.*|kube-probe.*\",request!~\"/nginx_status|/metrics\"}[24h])",
           "interval": "",
           "legendFormat": "{{request}}",
           "refId": "A"
@@ -923,9 +923,9 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "count_over_time(nginxlog_resp_bytes{resp_code=~\"3..\",agent!~\"Go-http-client.*|Prometheus.*|curl.*|Wget.*|kube-probe.*\",request!~\"/nginx_status|/metrics\"}[5m])",
+          "expr": "count_over_time(nginxlog_resp_bytes{instance=~\"$instance*\", resp_code=~\"3..\",agent!~\"Go-http-client.*|Prometheus.*|curl.*|Wget.*|kube-probe.*\",request!~\"/nginx_status|/metrics\"}[5m])",
           "interval": "",
-          "legendFormat": "{{instance}}",
+          "legendFormat": "{{request}}",
           "refId": "A"
         }
       ],
@@ -1021,9 +1021,9 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "count_over_time(nginxlog_resp_bytes{resp_code=~\"5..\",agent!~\"Go-http-client.*|Prometheus.*|curl.*|Wget.*|kube-probe.*\",request!~\"/nginx_status|/metrics\"}[5m])",
+          "expr": "count_over_time(nginxlog_resp_bytes{instance=~\"$instance*\", resp_code=~\"5..\",agent!~\"Go-http-client.*|Prometheus.*|curl.*|Wget.*|kube-probe.*\",request!~\"/nginx_status|/metrics\"}[5m])",
           "interval": "",
-          "legendFormat": "{{instance}}",
+          "legendFormat": "{{request}}",
           "refId": "A"
         }
       ],

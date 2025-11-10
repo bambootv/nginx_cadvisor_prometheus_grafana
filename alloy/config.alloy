@@ -1,0 +1,115 @@
+// ============================================================================
+// Grafana Alloy Configuration - Optimized Stack
+// ============================================================================
+//
+// Alloy thay thế:
+//   ✅ node_exporter    → prometheus.exporter.unix
+//   ✅ cadvisor         → prometheus.exporter.cadvisor
+//
+// Telegraf giữ lại (không trùng):
+//   ✅ inputs.nginx     → Nginx stub_status metrics
+//   ✅ inputs.tail      → Parse nginx access logs → nginxlog_* metrics
+//
+// ============================================================================
+
+// ============================================================================
+// LOGGING
+// ============================================================================
+logging {
+  level  = "info"
+  format = "logfmt"
+}
+
+// ============================================================================
+// PROMETHEUS REMOTE WRITE - Gửi metrics đến Prometheus
+// ============================================================================
+prometheus.remote_write "default" {
+  endpoint {
+    url = "http://prometheus:9090/api/v1/write"
+
+    queue_config {
+      capacity             = 10000
+      max_shards           = 10
+      max_samples_per_send = 5000
+    }
+  }
+}
+
+// ============================================================================
+// SYSTEM METRICS - Thay thế Node Exporter
+// ============================================================================
+prometheus.exporter.unix "system" {
+  // Thu thập tất cả system metrics
+  disable_collectors = []
+
+  // Enable all collectors
+  enable_collectors = [
+    "cpu",
+    "cpufreq",
+    "diskstats",
+    "filesystem",
+    "loadavg",
+    "meminfo",
+    "netdev",
+    "netstat",
+    "stat",
+    "time",
+    "uname",
+    "vmstat",
+  ]
+
+  // Mount points cho filesystem metrics
+  filesystem {
+    mount_points_exclude = "^/(dev|proc|sys|var/lib/docker/.+)($|/)"
+    fs_types_exclude     = "^(autofs|binfmt_misc|bpf|cgroup2?|configfs|debugfs|devpts|devtmpfs|fusectl|hugetlbfs|iso9660|mqueue|nsfs|overlay|proc|procfs|pstore|rpc_pipefs|securityfs|selinuxfs|squashfs|sysfs|tracefs)$"
+  }
+}
+
+prometheus.scrape "system_metrics" {
+  targets         = prometheus.exporter.unix.system.targets
+  forward_to      = [prometheus.remote_write.default.receiver]
+  scrape_interval = "15s"
+  scrape_timeout  = "10s"
+}
+
+// ============================================================================
+// CONTAINER METRICS - Thay thế cAdvisor
+// ============================================================================
+prometheus.exporter.cadvisor "containers" {
+  docker_host      = "unix:///var/run/docker.sock"
+  storage_duration = "2m"
+}
+
+prometheus.scrape "cadvisor" {
+  targets         = prometheus.exporter.cadvisor.containers.targets
+  forward_to      = [prometheus.remote_write.default.receiver]
+  scrape_interval = "10s"
+  scrape_timeout  = "10s"
+}
+
+// ============================================================================
+// TELEGRAF METRICS - Scrape từ Telegraf
+// ============================================================================
+// Telegraf thu thập:
+//   • inputs.nginx → nginx stub_status metrics
+//   • inputs.tail  → nginxlog_* metrics (từ access logs cho Dashboard 14900)
+// ============================================================================
+prometheus.scrape "telegraf" {
+  targets = [{
+    __address__ = "telegraf:9273",
+  }]
+
+  forward_to      = [prometheus.remote_write.default.receiver]
+  scrape_interval = "10s"
+}
+
+// ============================================================================
+// SELF MONITORING - Alloy's own metrics
+// ============================================================================
+prometheus.exporter.self "alloy" {}
+
+prometheus.scrape "alloy_metrics" {
+  targets         = prometheus.exporter.self.alloy.targets
+  forward_to      = [prometheus.remote_write.default.receiver]
+  scrape_interval = "30s"
+}

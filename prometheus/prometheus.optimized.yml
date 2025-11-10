@@ -1,0 +1,17 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+# ============================================================================
+# Stack Optimized: Alloy + Loki
+#
+# Alloy push metrics qua remote_write (system / container / nginx / access logs)
+# Prometheus chỉ cần scrape Alloy self-metrics (optional)
+# ============================================================================
+
+scrape_configs:
+  # Alloy self-monitoring (optional)
+  - job_name: "alloy"
+    static_configs:
+      - targets: ["alloy:12345"]
+    metrics_path: "/metrics"

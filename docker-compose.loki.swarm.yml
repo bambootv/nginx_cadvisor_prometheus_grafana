@@ -1,0 +1,124 @@
+version: '3.8'
+
+services:
+  nginx:
+    image: nginx:stub_status
+    ports:
+      - 80:80
+    volumes:
+      - ./nginx/nginx.conf:/usr/local/nginx/conf/nginx.conf:ro
+      - ./nginx/nginx_sites_available:/etc/nginx/sites-available/default:ro
+      - nginx_logs:/var/log/nginx
+    networks:
+      - monitoring_dev
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+
+  # ============================================================================
+  # Grafana Alloy - Thay thế HOÀN TOÀN: node_exporter + cadvisor + telegraf
+  # ============================================================================
+  alloy:
+    image: grafana/alloy:latest
+    ports:
+      - "12345:12345"
+    volumes:
+      - ./alloy/config.alloy:/etc/alloy/config.alloy:ro
+      - alloy_data:/var/lib/alloy
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/host/root:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - nginx_logs:/var/log/nginx:ro
+    command:
+      - run
+      - /etc/alloy/config.alloy
+      - --server.http.listen-addr=0.0.0.0:12345
+      - --storage.path=/var/lib/alloy/data
+    networks:
+      - monitoring_dev
+    deploy:
+      mode: global  # Deploy trên mọi node để thu thập metrics
+      restart_policy:
+        condition: on-failure
+    # Swarm không support privileged, dùng capabilities
+    cap_add:
+      - SYS_ADMIN
+      - SYS_PTRACE
+
+  prometheus:
+    image: prom/prometheus:v2.53.0
+    ports:
+      - 9090:9090
+    volumes:
+      - ./prometheus/prometheus.optimized.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus/recording_rules.yml:/etc/prometheus/recording_rules.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+      - '--web.enable-lifecycle'
+      - '--enable-feature=remote-write-receiver'
+    networks:
+      - monitoring_dev
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      restart_policy:
+        condition: on-failure
+
+  loki:
+    image: grafana/loki:2.9.8
+    user: "0:0"
+    ports:
+      - 3100:3100
+    command: -config.file=/etc/loki/config.yaml
+    volumes:
+      - ./loki/config.yaml:/etc/loki/config.yaml:ro
+      - loki_data:/loki
+    networks:
+      - monitoring_dev
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      restart_policy:
+        condition: on-failure
+
+  grafana:
+    image: grafana/grafana:10.3.3
+    ports:
+      - 3456:3000
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana:/etc/grafana/provisioning/dashboards:ro
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    networks:
+      - monitoring_dev
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      restart_policy:
+        condition: on-failure
+
+volumes:
+  nginx_logs:
+  grafana_data:
+  prometheus_data:
+  loki_data:
+  alloy_data:
+
+networks:
+  monitoring_dev:
+    driver: overlay
+    attachable: true

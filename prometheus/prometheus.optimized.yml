@@ -9,9 +9,4 @@ global:
 # Prometheus chỉ cần scrape Alloy self-metrics (optional)
 # ============================================================================
 
-scrape_configs:
-  # Alloy self-monitoring (optional)
-  - job_name: "alloy"
-    static_configs:
-      - targets: ["alloy:12345"]
-    metrics_path: "/metrics"
+scrape_configs: [] # Alloy pushes metrics via remote_write

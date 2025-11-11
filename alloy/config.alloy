@@ -1,32 +1,19 @@
 // ============================================================================
-// Grafana Alloy Configuration - Optimized Stack
-// ============================================================================
-//
-// Alloy thay thế:
-//   ✅ node_exporter    → prometheus.exporter.unix
-//   ✅ cadvisor         → prometheus.exporter.cadvisor
-//
-// Telegraf giữ lại (không trùng):
-//   ✅ inputs.nginx     → Nginx stub_status metrics
-//   ✅ inputs.tail      → Parse nginx access logs → nginxlog_* metrics
-//
+// Grafana Alloy - Full Replacement for Telegraf + Node Exporter + cAdvisor
+// FIXED ALL SYNTAX ERRORS - 11/11/2025 09:12 AM +07
 // ============================================================================
 
-// ============================================================================
-// LOGGING
-// ============================================================================
 logging {
   level  = "info"
   format = "logfmt"
 }
 
 // ============================================================================
-// PROMETHEUS REMOTE WRITE - Gửi metrics đến Prometheus
+// PROMETHEUS REMOTE WRITE
 // ============================================================================
-prometheus.remote_write "default" {
+prometheus.remote_write "prometheus" {
   endpoint {
     url = "http://prometheus:9090/api/v1/write"
-
     queue_config {
       capacity             = 10000
       max_shards           = 10
@@ -36,13 +23,9 @@ prometheus.remote_write "default" {
 }
 
 // ============================================================================
-// SYSTEM METRICS - Thay thế Node Exporter
+// SYSTEM METRICS (Node Exporter)
 // ============================================================================
 prometheus.exporter.unix "system" {
-  // Thu thập tất cả system metrics
-  disable_collectors = []
-
-  // Enable all collectors
   enable_collectors = [
     "cpu",
     "cpufreq",
@@ -56,60 +39,151 @@ prometheus.exporter.unix "system" {
     "time",
     "uname",
     "vmstat",
-  ]
-
-  // Mount points cho filesystem metrics
+  ]  // DẤU PHẨY CUỐI CÙNG
   filesystem {
     mount_points_exclude = "^/(dev|proc|sys|var/lib/docker/.+)($|/)"
     fs_types_exclude     = "^(autofs|binfmt_misc|bpf|cgroup2?|configfs|debugfs|devpts|devtmpfs|fusectl|hugetlbfs|iso9660|mqueue|nsfs|overlay|proc|procfs|pstore|rpc_pipefs|securityfs|selinuxfs|squashfs|sysfs|tracefs)$"
   }
 }
 
-prometheus.scrape "system_metrics" {
+prometheus.scrape "system" {
   targets         = prometheus.exporter.unix.system.targets
-  forward_to      = [prometheus.remote_write.default.receiver]
+  forward_to      = [prometheus.remote_write.prometheus.receiver]
   scrape_interval = "15s"
-  scrape_timeout  = "10s"
 }
 
 // ============================================================================
-// CONTAINER METRICS - Thay thế cAdvisor
+// CONTAINER METRICS (cAdvisor)
 // ============================================================================
 prometheus.exporter.cadvisor "containers" {
-  docker_host      = "unix:///var/run/docker.sock"
-  storage_duration = "2m"
+  docker_host = "unix:///var/run/docker.sock"
 }
 
 prometheus.scrape "cadvisor" {
   targets         = prometheus.exporter.cadvisor.containers.targets
-  forward_to      = [prometheus.remote_write.default.receiver]
+  forward_to      = [prometheus.remote_write.prometheus.receiver]
   scrape_interval = "10s"
-  scrape_timeout  = "10s"
 }
 
 // ============================================================================
-// TELEGRAF METRICS - Scrape từ Telegraf
+// NGINX STUB STATUS
 // ============================================================================
-// Telegraf thu thập:
-//   • inputs.nginx → nginx stub_status metrics
-//   • inputs.tail  → nginxlog_* metrics (từ access logs cho Dashboard 14900)
 // ============================================================================
-prometheus.scrape "telegraf" {
+// Scrape NGINX metrics
+// ============================================================================
+prometheus.scrape "nginx" {
+  // 'targets' là một danh sách các map.
+  targets = [
+    {
+      // Cú pháp đúng: các key (label) là chuỗi trong dấu ngoặc kép,
+      // theo sau là dấu = và giá trị.
+      "__address__"      = "nginx:80",
+      "__metrics_path__" = "/nginx_status",
+      "job"              = "nginx",
+      "instance"         = "nginx_service",
+    },
+  ]
+
+  // Giữ nguyên phần forward_to
+  forward_to = [prometheus.remote_write.prometheus.receiver]
+}
+
+// ============================================================================
+// NGINX LOGS → LOKI (Thay inputs.tail)
+// ============================================================================
+loki.source.file "nginx_access" {
   targets = [{
-    __address__ = "telegraf:9273",
-  }]
+    __path__  = "/var/log/nginx/access.log",
+    job       = "nginx",
+    instance  = "nginx",
+  }]  // DẤU PHẨY CUỐI CÙNG
+  forward_to = [loki.process.nginx.receiver]
+}
 
-  forward_to      = [prometheus.remote_write.default.receiver]
-  scrape_interval = "10s"
+loki.process "nginx" {
+  forward_to = [loki.write.loki.receiver]
+
+  // SỬA: stage.grok → stage.regex + pattern
+  stage.regex {
+    expression = "^(?P<client>\\S+) (?P<ident>\\S+) (?P<auth>\\S+) \\[(?P<timestamp>[^\\]]+)\\] \"(?P<verb>\\S+) (?P<request>[^\"]+) (?P<httpversion>\\S+)\" (?P<status>\\d+) (?P<response>\\d+) \"(?P<referrer>[^\"]*)\" \"(?P<agent>[^\"]*)\" \"(?P<req_time>\\d+\\.\\d+)\"$"
+  }
+
+  // Trích xuất phần đường dẫn gốc trước dấu "?" và lưu vào một trường mới.
+   stage.regex {
+    source     = "request"
+    expression = "^(?P<request_path>[^?]+)"
+  }
+
+  stage.labels {
+    values = {
+      verb      = "verb",
+      request   = "request_path", // Sử dụng trường đã được làm sạch
+      resp_code = "status",
+    }
+  }
+
+  stage.template {
+    source   = "httpversion_value"
+    template = "{{ if .httpversion }}{{ if eq .httpversion \"-\" }}0{{ else }}{{ Replace .httpversion \"HTTP/\" \"\" -1 }}{{ end }}{{ else }}0{{ end }}"
+  }
+
+  stage.template {
+    source   = "response_bytes"
+    template = "{{ if .response }}{{ if eq .response \"-\" }}0{{ else }}{{ .response }}{{ end }}{{ else }}0{{ end }}"
+  }
+
+  // ============================================================================
+  // TẠO METRICS TỪ LOGS (Giống Telegraf)
+  // ============================================================================
+
+  // Metric 3: Request Counter (Counter - đếm số requests)
+  stage.metrics {
+    metric.counter {
+      name        = "nginxlog_requests_total"
+      description = "Total number of nginx requests"
+      match_all   = true
+      action      = "inc"
+      prefix      = ""
+    }
+
+    metric.histogram {
+      name        = "nginxlog_request_duration_seconds"
+      description = "Distribution of NGINX request processing times, from logs."
+      source      = "req_time" // Lấy giá trị từ trường req_time đã parse ở Giai đoạn 1
+      prefix      = ""
+      buckets     = [0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10]
+    }
+  }
+}
+
+loki.write "loki" {
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
 }
 
 // ============================================================================
-// SELF MONITORING - Alloy's own metrics
+// ALLOY SELF MONITORING
 // ============================================================================
 prometheus.exporter.self "alloy" {}
 
-prometheus.scrape "alloy_metrics" {
-  targets         = prometheus.exporter.self.alloy.targets
-  forward_to      = [prometheus.remote_write.default.receiver]
-  scrape_interval = "30s"
+prometheus.relabel "alloy_self_labels" {
+  forward_to = [prometheus.remote_write.prometheus.receiver]
+
+  rule {
+    action       = "replace"
+    target_label = "instance"
+    replacement  = "alloy:12345"
+  }
+
+  rule {
+    action       = "replace"
+    target_label = "job"
+    replacement  = "alloy"
+  }
+}
+
+prometheus.scrape "alloy" {
+  targets    = prometheus.exporter.self.alloy.targets
+  forward_to = [prometheus.relabel.alloy_self_labels.receiver]
 }

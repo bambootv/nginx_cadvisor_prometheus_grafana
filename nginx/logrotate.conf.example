@@ -1,15 +1,18 @@
+# Sao lưu log Nginx theo dung lượng để tránh phình to ổ đĩa.
+# Sao chép file này thành `nginx/logrotate.conf` rồi chỉnh sửa nếu cần.
+
 /var/log/nginx/*.log {
     size 100M
+    rotate 7
     missingok
-    rotate 10
+    notifempty
     compress
     delaycompress
-    notifempty
-    create 640 nginx adm
     sharedscripts
     postrotate
         if [ -f /var/run/nginx.pid ]; then
-            kill -USR1 `cat /var/run/nginx.pid`
+            kill -USR1 "$(cat /var/run/nginx.pid)"
         fi
     endscript
 }
+

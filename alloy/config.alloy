@@ -1,0 +1,201 @@
+logging {
+  level  = "info"
+  format = "logfmt"
+}
+
+prometheus.remote_write "default" {
+  endpoint {
+    url = "http://prometheus:9090/api/v1/write"
+
+    queue_config {
+      capacity             = 10000
+      max_shards           = 10
+      max_samples_per_send = 5000
+    }
+  }
+}
+
+prometheus.exporter.unix "system" {
+  disable_collectors = []
+
+  enable_collectors = [
+    "cpu",
+    "cpufreq",
+    "diskstats",
+    "filesystem",
+    "loadavg",
+    "meminfo",
+    "netdev",
+    "netstat",
+    "stat",
+    "time",
+    "uname",
+    "vmstat",
+  ]
+
+  filesystem {
+    mount_points_exclude = "^/(dev|proc|sys|var/lib/docker/.+)($|/)"
+    fs_types_exclude     = "^(autofs|binfmt_misc|bpf|cgroup2?|configfs|debugfs|devpts|devtmpfs|fusectl|hugetlbfs|iso9660|mqueue|nsfs|overlay|proc|procfs|pstore|rpc_pipefs|securityfs|selinuxfs|squashfs|sysfs|tracefs)$"
+  }
+}
+
+prometheus.relabel "system_job" {
+  forward_to = [prometheus.remote_write.default.receiver]
+
+  rule {
+    target_label = "job"
+    replacement  = "alloy_system"
+  }
+}
+
+prometheus.scrape "system_metrics" {
+  targets         = prometheus.exporter.unix.system.targets
+  forward_to      = [prometheus.relabel.system_job.receiver]
+  scrape_interval = "15s"
+  scrape_timeout  = "10s"
+}
+
+prometheus.exporter.cadvisor "containers" {
+  docker_host      = "unix:///var/run/docker.sock"
+  storage_duration = "2m"
+}
+
+prometheus.relabel "cadvisor_job" {
+  forward_to = [prometheus.remote_write.default.receiver]
+
+  rule {
+    target_label = "job"
+    replacement  = "alloy_cadvisor"
+  }
+}
+
+prometheus.scrape "cadvisor" {
+  targets         = prometheus.exporter.cadvisor.containers.targets
+  forward_to      = [prometheus.relabel.cadvisor_job.receiver]
+  scrape_interval = "10s"
+  scrape_timeout  = "10s"
+}
+
+prometheus.scrape "telegraf" {
+  job_name        = "telegraf"
+  targets = [{
+    __address__ = "telegraf:9273",
+  }]
+
+  forward_to      = [prometheus.remote_write.default.receiver]
+  scrape_interval = "10s"
+  scrape_timeout  = "5s"
+}
+
+prometheus.exporter.self "alloy" {}
+
+prometheus.relabel "alloy_self_job" {
+  forward_to = [prometheus.remote_write.default.receiver]
+
+  rule {
+    target_label = "job"
+    replacement  = "alloy_self"
+  }
+}
+
+prometheus.scrape "alloy_metrics" {
+  targets         = prometheus.exporter.self.alloy.targets
+  forward_to      = [prometheus.relabel.alloy_self_job.receiver]
+  scrape_interval = "30s"
+}
+
+discovery.docker "containers" {
+  host = "unix:///var/run/docker.sock"
+}
+
+discovery.relabel "docker_logs" {
+  targets = discovery.docker.containers.targets
+
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    target_label  = "container"
+    regex         = "(.+)"
+    replacement   = "$1"
+    action        = "replace"
+  }
+
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_swarm_service_name"]
+    target_label  = "service"
+    regex         = "(.+)"
+    replacement   = "$1"
+    action        = "replace"
+  }
+
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
+    target_label  = "service"
+    regex         = "(.+)"
+    replacement   = "$1"
+    action        = "replace"
+  }
+
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_swarm_service_name"]
+    target_label  = "compose_service"
+    regex         = "(.+)"
+    replacement   = "$1"
+    action        = "replace"
+  }
+
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
+    target_label  = "compose_service"
+    regex         = "(.+)"
+    replacement   = "$1"
+    action        = "replace"
+  }
+
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_stack_namespace"]
+    target_label  = "compose_project"
+    regex         = "(.+)"
+    replacement   = "$1"
+    action        = "replace"
+  }
+
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_project"]
+    target_label  = "compose_project"
+    regex         = "(.+)"
+    replacement   = "$1"
+    action        = "replace"
+  }
+}
+
+loki.source.file "nginx_access" {
+  targets = [{
+    __path__ = "/var/log/nginx/access.log",
+    job      = "nginx",
+    stream   = "stdout",
+  }]
+  forward_to = [loki.write.loki.receiver]
+}
+
+loki.source.file "nginx_error" {
+  targets = [{
+    __path__ = "/var/log/nginx/error.log",
+    job      = "nginx",
+    stream   = "stderr",
+  }]
+  forward_to = [loki.write.loki.receiver]
+}
+
+loki.source.docker "containers" {
+  host         = "unix:///var/run/docker.sock"
+  targets      = discovery.relabel.docker_logs.output
+  labels       = {source = "docker", env = "staging"}
+  relabel_rules = discovery.relabel.docker_logs.rules
+  forward_to   = [loki.write.loki.receiver]
+}
+
+loki.write "loki" {
+  endpoint {
+    url = "http://loki:3102/loki/api/v1/push"
+  }
+}

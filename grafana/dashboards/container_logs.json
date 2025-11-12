@@ -1,0 +1,181 @@
+{
+  "__inputs": [],
+  "__requires": [
+    {
+      "type": "datasource",
+      "id": "loki",
+      "name": "Loki"
+    },
+    {
+      "type": "panel",
+      "name": "Logs",
+      "id": "logs"
+    }
+  ],
+  "annotations": {
+    "list": [
+      {
+        "name": "Annotations & Alerts",
+        "type": "dashboard",
+        "enable": true,
+        "datasource": "Loki"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "iteration": 1700000000000,
+  "links": [],
+  "panels": [
+    {
+      "datasource": "Loki",
+      "gridPos": {
+        "h": 12,
+        "w": 12,
+        "x": 0,
+        "y": 0
+      },
+      "id": 2,
+      "maxPerRow": 2,
+      "repeat": "priority",
+      "repeatDirection": "h",
+      "options": {
+        "dedupStrategy": "signature",
+        "enableLogDetails": true,
+        "prettifyLogMessage": false,
+        "showCommonLabels": true,
+        "showLabels": true,
+        "showSearch": true,
+        "showTime": true,
+        "sortOrder": "Descending",
+        "wrapLogMessage": true
+      },
+      "targets": [
+        {
+          "expr": "{source=\"docker\", service=~\"$priority\"}",
+          "queryType": "range",
+          "refId": "A"
+        }
+      ],
+      "title": "Container Logs - $priority",
+      "type": "logs"
+    },
+    {
+      "datasource": "Loki",
+      "gridPos": {
+        "h": 12,
+        "w": 12,
+        "x": 0,
+        "y": 12
+      },
+      "id": 4,
+      "maxPerRow": 2,
+      "repeat": "container",
+      "repeatDirection": "h",
+      "options": {
+        "dedupStrategy": "signature",
+        "enableLogDetails": true,
+        "prettifyLogMessage": false,
+        "showCommonLabels": true,
+        "showLabels": true,
+        "showSearch": true,
+        "showTime": true,
+        "sortOrder": "Descending",
+        "wrapLogMessage": true
+      },
+      "targets": [
+        {
+          "expr": "{source=\"docker\", service=~\"$container\"}",
+          "queryType": "range",
+          "refId": "A"
+        }
+      ],
+      "title": "Container Logs - $container",
+      "type": "logs"
+    }
+  ],
+  "refresh": "10s",
+  "schemaVersion": 39,
+  "style": "dark",
+  "tags": [
+    "containers",
+    "logs",
+    "alloy"
+  ],
+  "templating": {
+    "list": [
+      {
+        "type": "custom",
+        "name": "priority",
+        "label": "Priority Containers",
+        "query": "ai_school_local_backend,ai_school_local_frontend",
+        "options": [
+          {
+            "text": "ai_school_local_backend",
+            "value": "ai_school_local_backend",
+            "selected": true
+          },
+          {
+            "text": "ai_school_local_frontend",
+            "value": "ai_school_local_frontend",
+            "selected": true
+          }
+        ],
+        "current": {
+          "selected": true,
+          "text": "ai_school_local_backend + ai_school_local_frontend",
+          "value": [
+            "ai_school_local_backend",
+            "ai_school_local_frontend"
+          ]
+        },
+        "multi": true,
+        "includeAll": false,
+        "skipUrlSync": false,
+        "sort": 1
+      },
+      {
+        "datasource": "Loki",
+        "definition": "label_values({source=\"docker\", service!~\"ai_school_local_backend|ai_school_local_frontend\"}, service)",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Containers",
+        "multi": true,
+        "name": "container",
+        "options": [],
+        "query": "label_values({source=\"docker\", service!~\"ai_school_local_backend|ai_school_local_frontend\"}, service)",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query",
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": ".*"
+        },
+        "allValue": ".*"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "timepicker": {
+    "refresh_intervals": [
+      "5s",
+      "10s",
+      "30s",
+      "1m",
+      "5m",
+      "15m"
+    ]
+  },
+  "timezone": "",
+  "title": "Container Logs Overview",
+  "uid": null,
+  "version": 1
+}

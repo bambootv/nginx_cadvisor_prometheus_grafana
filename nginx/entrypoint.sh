@@ -1,22 +1,21 @@
 #!/bin/sh
+set -e
 
-# Remove symbolic links if they exist
-if [ -L /var/log/nginx/access.log ]; then
-    unlink /var/log/nginx/access.log
+# Ensure log files exist and are regular files (logrotate needs this)
+for file in access.log error.log; do
+    log_path="/var/log/nginx/${file}"
+    if [ -L "${log_path}" ]; then
+        unlink "${log_path}"
+    fi
+    touch "${log_path}"
+    chmod 644 "${log_path}"
+done
+
+touch /var/log/cron.log
+chmod 644 /var/log/cron.log
+
+# Wire up logrotate cronjob if provided via bind mount
+if [ -f /etc/cron.d/logrotate ]; then
+    crontab /etc/cron.d/logrotate
+    cron
 fi
-
-if [ -L /var/log/nginx/error.log ]; then
-    unlink /var/log/nginx/error.log
-fi
-
-# Ensure log files exist
-touch /var/log/nginx/access.log
-touch /var/log/nginx/error.log
-chmod 644 /var/log/nginx/access.log
-chmod 644 /var/log/nginx/error.log
-
-# Start cron
-cron && crontab /etc/cron.d/logrotate
-
-# Start Nginx
-/usr/local/nginx/sbin/nginx -g "daemon off;"

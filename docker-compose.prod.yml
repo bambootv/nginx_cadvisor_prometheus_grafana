@@ -21,8 +21,10 @@ services:
     ports:
       - "80:80"
     volumes:
-      - ./nginx/nginx.conf:/usr/local/nginx/conf/nginx.conf:ro
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./nginx/nginx_sites_available:/etc/nginx/sites-available/default:ro
+      - ./nginx/logrotate.conf:/etc/logrotate.d/nginx:ro
+      - ./nginx/crontab:/etc/cron.d/logrotate:ro
       - nginx_logs:/var/log/nginx
     networks:
       - monitoring_swarm
@@ -43,53 +45,34 @@ services:
         max_attempts: 3
         window: 5s
 
-  node_exporter:
-    image: prom/node-exporter:latest
+  alloy:
+    image: grafana/alloy:v1.11.3
     ports:
-      - "9100:9100"
+      - "12345:12345"
+    command:
+      - "run"
+      - "--server.http.listen-addr=0.0.0.0:12345"
+      - "/etc/alloy/config.alloy"
     volumes:
+      - ./alloy/config.alloy:/etc/alloy/config.alloy:ro
       - /proc:/host/proc:ro
       - /sys:/host/sys:ro
       - /:/host/root:ro
-    networks:
-      - monitoring_swarm
-    deploy: *deploy_config
-
-  nginx_prometheus_exporter:
-    image: nginx/nginx-prometheus-exporter:1.2.0
-    command: ["--nginx.scrape-uri", "http://nginx/nginx_status"]
-    networks:
-      - monitoring_swarm
-    deploy: *deploy_config
-
-  telegraf:
-    image: telegraf:1.29.5
-    volumes:
-      - ./telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
       - nginx_logs:/var/log/nginx:ro
     networks:
       - monitoring_swarm
     deploy: *deploy_config
 
-  cadvisor:
-    image: gcr.io/cadvisor/cadvisor:v0.47.0
-    volumes:
-      - /:/rootfs:ro
-      - /var/run:/var/run:ro
-      - /sys:/sys:ro
-      - /var/lib/docker/:/var/lib/docker:ro
-      - /dev/disk/:/dev/disk:ro
-      - /var/run/docker.sock:/var/run/docker.sock:rw
-    networks:
-      - monitoring_swarm
-    deploy: *deploy_config
-
   prometheus:
-    image: prom/prometheus:v2.53.0
+    image: prom/prometheus:v3.7.3
+    ports:
+      - "9090:9090"
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
       - "--storage.tsdb.retention.time=7d"
       - "--storage.tsdb.retention.size=2GB"
+      - "--web.enable-remote-write-receiver"
     volumes:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - prometheus_data:/prometheus
@@ -97,12 +80,40 @@ services:
       - monitoring_swarm
     deploy: *deploy_config
 
+  loki:
+    image: grafana/loki:3.5.8
+    ports:
+      - "3102:3102"
+    command:
+      - "-config.file=/etc/loki/local-config.yaml"
+      - "-querier.scheduler-address="
+      - "-frontend.scheduler-address="
+    volumes:
+      - ./loki/local-config.yaml:/etc/loki/local-config.yaml:ro
+    user: "0"
+    networks:
+      - monitoring_swarm
+    deploy: *deploy_config
+
   grafana:
-    image: grafana/grafana:10.3.3
+    image: grafana/grafana:12.2.1
     ports:
       - "3456:3000"
     volumes:
       - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+    networks:
+      - monitoring_swarm
+    deploy: *deploy_config
+
+  telegraf:
+    image: telegraf:1.29.5
+    ports:
+      - "9273:9273"
+    volumes:
+      - ./telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro
+      - nginx_logs:/var/log/nginx:ro
     networks:
       - monitoring_swarm
     deploy: *deploy_config

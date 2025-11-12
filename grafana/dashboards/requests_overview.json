@@ -1,0 +1,632 @@
+{
+  "__inputs": [],
+  "__requires": [
+    { "type": "datasource", "id": "prometheus", "name": "Prometheus" },
+    { "type": "datasource", "id": "loki", "name": "Loki" },
+    { "type": "panel", "name": "Timeseries", "id": "timeseries" },
+    { "type": "panel", "name": "Logs", "id": "logs" },
+    { "type": "panel", "name": "Stat", "id": "stat" },
+    { "type": "panel", "name": "Pie chart", "id": "piechart" }
+  ],
+  "annotations": {
+    "list": [
+      {
+        "name": "Annotations & Alerts",
+        "type": "dashboard",
+        "enable": true,
+        "datasource": "Prometheus"
+      }
+    ]
+  },
+  "editable": true,
+  "gnetId": null,
+  "graphTooltip": 0,
+  "id": null,
+  "iteration": 1700000000000,
+  "links": [],
+  "panels": [
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{ "color": "green", "value": null }]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 0 },
+      "id": 11,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "expr": "sum(increase(nginx_requests{job=\"telegraf\"}[$__range]))",
+          "legendFormat": "Requests in Period",
+          "refId": "A"
+        }
+      ],
+      "title": "Requests in Selected Period",
+      "type": "stat"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{ "color": "green", "value": null }]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 4, "x": 4, "y": 0 },
+      "id": 12,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(nginx_requests{job=\"telegraf\"}[1m]))",
+          "legendFormat": "Current Rate",
+          "refId": "A"
+        }
+      ],
+      "title": "Current Request Rate (req/s)",
+      "type": "stat"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{ "color": "green", "value": null }]
+          },
+          "unit": "reqps"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 4, "x": 8, "y": 0 },
+      "id": 13,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["mean"], "fields": "", "values": false },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "expr": "sum(count_over_time(nginxlog_resp_bytes{job=\"telegraf\",resp_code=~\"2..\",request!=\"/nginx_status\",request=~\"/api.*\"}[5m])) / 300",
+          "legendFormat": "Avg 2xx req/s",
+          "refId": "A"
+        }
+      ],
+      "title": "Avg 2xx Request/s",
+      "type": "stat"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{ "color": "blue", "value": null }]
+          },
+          "unit": "reqps"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 4 },
+      "id": 21,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["mean"], "fields": "", "values": false },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "expr": "sum(count_over_time(nginxlog_resp_bytes{job=\"telegraf\",resp_code=~\"3..\",request!=\"/nginx_status\",request=~\"/api.*\"}[5m])) / 300",
+          "legendFormat": "Avg 3xx req/s",
+          "refId": "A"
+        }
+      ],
+      "title": "Avg 3xx Request/s",
+      "type": "stat"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{ "color": "yellow", "value": null }]
+          },
+          "unit": "reqps"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 4, "x": 4, "y": 4 },
+      "id": 22,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["mean"], "fields": "", "values": false },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "expr": "sum(count_over_time(nginxlog_resp_bytes{job=\"telegraf\",resp_code=~\"4..\",request!=\"/nginx_status\",request=~\"/api.*\"}[5m])) / 300",
+          "legendFormat": "Avg 4xx req/s",
+          "refId": "A"
+        }
+      ],
+      "title": "Avg 4xx Request/s",
+      "type": "stat"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{ "color": "red", "value": null }]
+          },
+          "unit": "reqps"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 4, "x": 8, "y": 4 },
+      "id": 23,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["mean"], "fields": "", "values": false },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "expr": "sum(count_over_time(nginxlog_resp_bytes{job=\"telegraf\",resp_code=~\"5..\",request!=\"/nginx_status\",request=~\"/api.*\"}[5m])) / 300",
+          "legendFormat": "Avg 5xx req/s",
+          "refId": "A"
+        }
+      ],
+      "title": "Avg 5xx Request/s",
+      "type": "stat"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": { "tooltip": false, "viz": false, "legend": false },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": { "type": "linear" },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": { "group": "A", "mode": "none" },
+            "thresholdsStyle": { "mode": "off" }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{ "color": "green", "value": null }]
+          },
+          "unit": "short"
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byRegexp", "options": "/2../" },
+            "properties": [
+              {
+                "id": "color",
+                "value": { "fixedColor": "green", "mode": "fixed" }
+              }
+            ]
+          },
+          {
+            "matcher": { "id": "byRegexp", "options": "/3../" },
+            "properties": [
+              {
+                "id": "color",
+                "value": { "fixedColor": "blue", "mode": "fixed" }
+              }
+            ]
+          },
+          {
+            "matcher": { "id": "byRegexp", "options": "/4../" },
+            "properties": [
+              {
+                "id": "color",
+                "value": { "fixedColor": "yellow", "mode": "fixed" }
+              }
+            ]
+          },
+          {
+            "matcher": { "id": "byRegexp", "options": "/5../" },
+            "properties": [
+              {
+                "id": "color",
+                "value": { "fixedColor": "red", "mode": "fixed" }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 24 },
+      "id": 4,
+      "options": {
+        "legend": {
+          "calcs": ["last"],
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": { "mode": "multi" }
+      },
+      "targets": [
+        {
+          "expr": "sum by (request_path) (label_replace(count by (request) (nginxlog_resp_bytes{job=\"telegraf\",resp_code=~\"2..\",request!=\"/nginx_status\",request=~\"/api.*\",agent!~\"Go-http-client.*|Prometheus.*|curl.*|Wget.*|kube-probe.*\"}), \"request_path\", \"$1\", \"request\", \"^([^?]+).*\"))",
+          "legendFormat": "{{request_path}}",
+          "refId": "A"
+        }
+      ],
+      "targets": [
+        {
+          "expr": "sum by (verb, request_path) (label_replace(count_over_time(nginxlog_resp_bytes{job=\"telegraf\",resp_code=~\"2..\",request!=\"/nginx_status\",request=~\"/api.*\"}[$__rate_interval]), \"request_path\", \"$1\", \"request\", \"^([^?]+).*\"))",
+          "legendFormat": "{{verb}} {{request_path}}",
+          "refId": "A"
+        }
+      ],
+      "title": "2xx Status Code Requests",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": { "tooltip": false, "viz": false, "legend": false },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": { "type": "linear" },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": { "group": "A", "mode": "none" },
+            "thresholdsStyle": { "mode": "off" }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{ "color": "green", "value": null }]
+          },
+          "unit": "short"
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byRegexp", "options": "/3../" },
+            "properties": [
+              {
+                "id": "color",
+                "value": { "fixedColor": "blue", "mode": "fixed" }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 24 },
+      "id": 14,
+      "options": {
+        "legend": {
+          "calcs": ["last"],
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": { "mode": "multi" }
+      },
+      "targets": [
+        {
+          "expr": "sum by (verb, request_path) (label_replace(count_over_time(nginxlog_resp_bytes{job=\"telegraf\",resp_code=~\"3..\",request!=\"/nginx_status\",request=~\"/api.*\"}[$__rate_interval]), \"request_path\", \"$1\", \"request\", \"^([^?]+).*\"))",
+          "legendFormat": "{{verb}} {{request_path}}",
+          "refId": "A"
+        }
+      ],
+      "title": "3xx Status Code Requests",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": { "tooltip": false, "viz": false, "legend": false },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": { "type": "linear" },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": { "group": "A", "mode": "none" },
+            "thresholdsStyle": { "mode": "off" }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{ "color": "green", "value": null }]
+          },
+          "unit": "short"
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byRegexp", "options": "/4../" },
+            "properties": [
+              {
+                "id": "color",
+                "value": { "fixedColor": "yellow", "mode": "fixed" }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 32 },
+      "id": 115,
+      "options": {
+        "legend": {
+          "calcs": ["last"],
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": { "mode": "multi" }
+      },
+      "targets": [
+        {
+          "expr": "sum by (verb, request_path) (label_replace(count_over_time(nginxlog_resp_bytes{job=\"telegraf\",resp_code=~\"4..\",request!=\"/nginx_status\",request=~\"/api.*\"}[$__rate_interval]), \"request_path\", \"$1\", \"request\", \"^([^?]+).*\"))",
+          "legendFormat": "{{verb}} {{request_path}}",
+          "refId": "A"
+        }
+      ],
+      "title": "4xx Status Code Requests",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": { "tooltip": false, "viz": false, "legend": false },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": { "type": "linear" },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": { "group": "A", "mode": "none" },
+            "thresholdsStyle": { "mode": "off" }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{ "color": "green", "value": null }]
+          },
+          "unit": "short"
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byRegexp", "options": "/5../" },
+            "properties": [
+              {
+                "id": "color",
+                "value": { "fixedColor": "red", "mode": "fixed" }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 32 },
+      "id": 17,
+      "options": {
+        "legend": {
+          "calcs": ["last"],
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": { "mode": "multi" }
+      },
+      "targets": [
+        {
+          "expr": "sum by (verb, request_path) (label_replace(count_over_time(nginxlog_resp_bytes{job=\"telegraf\",resp_code=~\"5..\",request!=\"/nginx_status\",request=~\"/api.*\"}[$__rate_interval]), \"request_path\", \"$1\", \"request\", \"^([^?]+).*\"))",
+          "legendFormat": "{{verb}} {{request_path}}",
+          "refId": "A"
+        }
+      ],
+      "title": "5xx Status Code Requests",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{ "color": "green", "value": null }]
+          },
+          "unit": "reqps"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 12 },
+      "id": 19,
+      "options": {
+        "legend": {
+          "calcs": ["mean", "sum", "max", "last"],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "width": 600
+        },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "targets": [
+        {
+          "expr": "sum by (verb, request_path) (label_replace(sum(count_over_time(nginxlog_resp_bytes{job=\"telegraf\",request!=\"/nginx_status\",request=~\"/api.*\"}[1m])) by (request, verb) / 60, \"request_path\", \"$1\", \"request\", \"^([^?]+).*\"))",
+          "legendFormat": "{{verb}} {{request_path}}",
+          "refId": "A"
+        }
+      ],
+      "title": "API Endpoints Request Rate",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "Loki",
+      "gridPos": { "h": 14, "w": 24, "x": 0, "y": 40 },
+      "id": 300,
+      "options": {
+        "dedupStrategy": "none",
+        "enableLogDetails": true,
+        "prettifyLogMessage": false,
+        "showCommonLabels": false,
+        "showLabels": false,
+        "showTime": true,
+        "sortOrder": "Descending",
+        "wrapLogMessage": false
+      },
+      "targets": [
+        {
+          "expr": "{job=\"nginx\"} != \"/nginx_status\"",
+          "queryType": "range",
+          "refId": "A"
+        }
+      ],
+      "title": "Nginx Access Logs",
+      "type": "logs"
+    },
+    {
+      "datasource": "Loki",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{ "color": "green", "value": null }]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "id": 205,
+      "options": {
+        "displayLabels": [],
+        "legend": {
+          "calcs": ["percent", "total"],
+          "displayMode": "list",
+          "placement": "right"
+        },
+        "pieType": "pie",
+        "tooltip": { "mode": "single" }
+      },
+      "pluginVersion": "10.3.3",
+      "targets": [
+        {
+          "expr": "topk(10, sum by (method, request_path) (count_over_time(( {job=\"nginx\"} | regexp \"\\\"(?P<method>GET|POST|PUT|DELETE|PATCH|OPTIONS) (?P<request_path>/api[^ ?\\\"]+)\" | method=~\".+\" | request_path=~\".+\" )[$__range])))",
+          "legendFormat": "{{method}} {{request_path}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Top API Endpoints Share (by Total Requests)",
+      "type": "piechart"
+    }
+  ],
+  "refresh": "10s",
+  "schemaVersion": 39,
+  "style": "dark",
+  "tags": ["nginx", "alloy"],
+  "templating": { "list": [] },
+  "time": { "from": "now-1h", "to": "now" },
+  "timezone": "",
+  "title": "Requests Overview",
+  "version": 1
+}

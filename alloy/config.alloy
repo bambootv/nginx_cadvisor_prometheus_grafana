@@ -1,0 +1,247 @@
+// ============================================================================
+// Grafana Alloy - Full Replacement for Telegraf + Node Exporter + cAdvisor
+// FIXED ALL SYNTAX ERRORS - 11/11/2025 09:12 AM +07
+// ============================================================================
+
+logging {
+  level  = "info"
+  format = "logfmt"
+}
+
+// ============================================================================
+// PROMETHEUS REMOTE WRITE
+// ============================================================================
+prometheus.remote_write "prometheus" {
+  endpoint {
+    url = "http://prometheus:9090/api/v1/write"
+    queue_config {
+      capacity             = 10000
+      max_shards           = 10
+      max_samples_per_send = 5000
+    }
+  }
+}
+
+// ============================================================================
+// SYSTEM METRICS (Node Exporter)
+// ============================================================================
+prometheus.exporter.unix "system" {
+  enable_collectors = [
+    "cpu",
+    "cpufreq",
+    "diskstats",
+    "filesystem",
+    "loadavg",
+    "meminfo",
+    "netdev",
+    "netstat",
+    "stat",
+    "time",
+    "uname",
+    "vmstat",
+  ]  // DẤU PHẨY CUỐI CÙNG
+  filesystem {
+    mount_points_exclude = "^/(dev|proc|sys|var/lib/docker/.+)($|/)"
+    fs_types_exclude     = "^(autofs|binfmt_misc|bpf|cgroup2?|configfs|debugfs|devpts|devtmpfs|fusectl|hugetlbfs|iso9660|mqueue|nsfs|overlay|proc|procfs|pstore|rpc_pipefs|securityfs|selinuxfs|squashfs|sysfs|tracefs)$"
+  }
+}
+
+prometheus.scrape "system" {
+  targets         = prometheus.exporter.unix.system.targets
+  forward_to      = [prometheus.remote_write.prometheus.receiver]
+  scrape_interval = "15s"
+}
+
+// ============================================================================
+// CONTAINER METRICS (cAdvisor)
+// ============================================================================
+prometheus.exporter.cadvisor "containers" {
+  docker_host = "unix:///var/run/docker.sock"
+}
+
+prometheus.scrape "cadvisor" {
+  targets         = prometheus.exporter.cadvisor.containers.targets
+  forward_to      = [prometheus.remote_write.prometheus.receiver]
+  scrape_interval = "10s"
+}
+
+// ============================================================================
+// NGINX STUB STATUS
+// ============================================================================
+// ============================================================================
+// Scrape NGINX metrics
+// ============================================================================
+prometheus.scrape "nginx" {
+  // 'targets' là một danh sách các map.
+  targets = [
+    {
+      // Cú pháp đúng: các key (label) là chuỗi trong dấu ngoặc kép,
+      // theo sau là dấu = và giá trị.
+      "__address__"      = "nginx:80",
+      "__metrics_path__" = "/nginx_status",
+      "job"              = "nginx",
+      "instance"         = "nginx_service",
+    },
+  ]
+
+  // Giữ nguyên phần forward_to
+  forward_to = [prometheus.remote_write.prometheus.receiver]
+}
+
+// ============================================================================
+// NGINX LOGS → LOKI (Thay inputs.tail)
+// ============================================================================
+loki.source.file "nginx_access" {
+  targets = [{
+    __path__  = "/var/log/nginx/access.log",
+    job       = "nginx",
+    instance  = "nginx",
+  }]  // DẤU PHẨY CUỐI CÙNG
+  forward_to = [loki.process.nginx.receiver]
+}
+
+loki.process "nginx" {
+  forward_to = [loki.write.loki.receiver]
+
+  // Stage 1: Parse the 'latency_log' format using logfmt.
+  stage.logfmt {
+    mapping = {
+      "ip" = "",
+      "time_local" = "",
+      "method" = "",
+      "uri" = "",
+      "status" = "",
+      "bytes_sent" = "",
+      "referer" = "",
+      "user_agent" = "",
+      "request_time" = "",
+    }
+  }
+
+  // Stage 2: Extract the request path from the 'uri' field, ignoring query params
+   stage.regex {
+    source     = "uri"
+    expression = "^(?P<request_path>[^?]+)"
+  }
+
+  // Stage 3: Drop lines that are missing key fields required for metrics.
+  stage.drop {
+    source = "status"
+    value  = ""
+  }
+  stage.drop {
+    source = "method"
+    value  = ""
+  }
+  stage.drop {
+    source = "uri"
+    value  = ""
+  }
+  stage.drop {
+    source = "request_time"
+    value  = ""
+  }
+
+  // Stage 4: Create labels for Prometheus metrics from parsed fields
+  stage.labels {
+    values = {
+      verb      = "method",
+      request   = "request_path",
+      resp_code = "status",
+    }
+  }
+
+  // Stage 5: Create metrics from the parsed log fields
+  stage.metrics {
+    // Metric 1: Request Counter (existing)
+    metric.counter {
+      name        = "nginxlog_requests_total"
+      description = "Total number of nginx requests"
+      match_all   = true
+      action      = "inc"
+    }
+
+    // Metric 2: New Request Latency Histogram
+    metric.histogram {
+      name        = "nginx_request_latency_seconds"
+      description = "Nginx request latency distribution in seconds"
+      source      = "request_time" // Use the value of the 'request_time' field
+      buckets     = [0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10]
+    }
+  }
+}
+
+loki.write "loki" {
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
+}
+
+// ============================================================================
+// ALLOY SELF MONITORING
+// ============================================================================
+prometheus.exporter.self "alloy" {}
+
+prometheus.relabel "alloy_self_labels" {
+  forward_to = [prometheus.remote_write.prometheus.receiver]
+
+  rule {
+    action       = "replace"
+    target_label = "instance"
+    replacement  = "alloy:12345"
+  }
+
+  rule {
+    action       = "replace"
+    target_label = "job"
+    replacement  = "alloy"
+  }
+}
+
+prometheus.scrape "alloy" {
+  targets    = prometheus.exporter.self.alloy.targets
+  forward_to = [prometheus.relabel.alloy_self_labels.receiver]
+}
+
+// ============================================================================
+// ALL CONTAINER LOGS -> LOKI
+// ============================================================================
+
+// Bước 1: Tìm kiếm tất cả container và các metadata của chúng
+discovery.docker "all_containers_discovery" {
+  host = "unix:///var/run/docker.sock"
+}
+
+// Bước 2: Xử lý metadata và tạo ra các label cuối cùng
+discovery.relabel "all_containers_relabel" {
+  targets = discovery.docker.all_containers_discovery.targets
+
+  // Rule 1: Tạo label job="dockerlogs"
+  rule {
+    action       = "replace"
+    target_label = "job"
+    replacement  = "dockerlogs"
+  }
+  // Rule 2: Lấy tên container tạo thành label "name"
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    target_label  = "name"
+  }
+  // Rule 3: Lấy tên service làm label "compose_service"
+  rule {
+    source_labels = ["__meta_docker_compose_service"]
+    target_label  = "compose_service"
+  }
+  // Rule 4: Giữ lại các label mặc định từ docker
+  rule {
+    action = "labelmap"
+    regex  = "__meta_docker_container_label_(.+)"
+  }
+}
+
+// Bước 3: Thu thập log từ các target đã được gán lại label
+loki.source.docker "all_containers_scrape" {
+  host       = "unix:///var/run/docker.sock"
+  targets    = discovery.relabel.all_containers_relabel.output
+  forward_to = [loki.write.loki.receiver]
+}

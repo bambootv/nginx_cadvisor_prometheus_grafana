@@ -73,16 +73,11 @@
   "templating": {
     "list": [
       {
-        "current": {
-          "selected": true,
-          "text": "All",
-          "value": "$__all"
-        },
         "datasource": "Loki",
         "definition": "label_values(name)",
         "hide": 0,
-        "includeAll": true,
-        "multi": true,
+        "includeAll": false,
+        "multi": false,
         "name": "container_name",
         "options": [],
         "query": "label_values(name)",

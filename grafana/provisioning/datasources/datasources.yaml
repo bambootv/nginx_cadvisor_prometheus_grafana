@@ -1,0 +1,24 @@
+# /grafana/provisioning/datasources/datasources.yaml
+apiVersion: 1
+
+# Danh sách các datasources sẽ được tự động thêm vào Grafana
+datasources:
+  # Prometheus datasource
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    orgId: 1
+    url: http://prometheus:9090
+    isDefault: true
+    version: 1
+    editable: false
+
+  # Loki datasource
+  - name: Loki
+    type: loki
+    access: proxy
+    orgId: 1
+    url: http://loki:3100
+    isDefault: false
+    version: 1
+    editable: false

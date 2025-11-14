@@ -18,5 +18,5 @@ chmod 644 /var/log/nginx/error.log
 # Start cron
 cron && crontab /etc/cron.d/logrotate
 
-# Start Nginx
-/usr/local/nginx/sbin/nginx -g "daemon off;"
+# Start Nginx using the path from the base image
+/usr/sbin/nginx -g "daemon off;"

@@ -16,13 +16,16 @@ x-deploy: &deploy_config
     window: 5s
 
 services:
+  # ============================================================================
+  # NGINX - Web Server
+  # ============================================================================
   nginx:
     image: nginx:stub_status
     ports:
       - "80:80"
     volumes:
-      - ./nginx/nginx.conf:/usr/local/nginx/conf/nginx.conf:ro
-      - ./nginx/nginx_sites_available:/etc/nginx/sites-available/default:ro
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/nginx_sites_available:/etc/nginx/conf.d/default.conf:ro
       - nginx_logs:/var/log/nginx
     networks:
       - monitoring_swarm
@@ -43,66 +46,91 @@ services:
         max_attempts: 3
         window: 5s
 
-  node_exporter:
-    image: prom/node-exporter:latest
+  # ============================================================================
+  # GRAFANA ALLOY - Thay thế: node_exporter + cadvisor
+  # Thu thập:
+  #   • System metrics (CPU, RAM, Disk, Network)
+  #   • Container metrics (Docker stats)
+  # ============================================================================
+  alloy:
+    image: grafana/alloy:v1.11.1
     ports:
-      - "9100:9100"
+      - "12345:12345"  # Alloy UI
     volumes:
+      - ./alloy/config.alloy:/etc/alloy/config.alloy:ro
+      - nginx_logs:/var/log/nginx:ro
+      - alloy_data:/var/lib/alloy
       - /proc:/host/proc:ro
       - /sys:/host/sys:ro
       - /:/host/root:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+    command:
+      - run
+      - /etc/alloy/config.alloy
+      - --server.http.listen-addr=0.0.0.0:12345
+      - --storage.path=/var/lib/alloy/data
     networks:
       - monitoring_swarm
-    deploy: *deploy_config
+    deploy:
+      mode: global  # Chạy trên mỗi node để thu thập metrics
+      restart_policy:
+        condition: any
+        delay: 5s
+        max_attempts: 3
+        window: 5s
 
-  nginx_prometheus_exporter:
-    image: nginx/nginx-prometheus-exporter:1.2.0
-    command: ["--nginx.scrape-uri", "http://nginx/nginx_status"]
-    networks:
-      - monitoring_swarm
-    deploy: *deploy_config
-
-  telegraf:
-    image: telegraf:1.29.5
+  loki:
+    image: grafana/loki:3.5
+    user: "0:0"
+    ports:
+      - 3102:3102
+    command: -config.file=/etc/loki/config.yaml
     volumes:
-      - ./telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro
-      - nginx_logs:/var/log/nginx:ro
+      - ./loki/config.yaml:/etc/loki/config.yaml:ro
+      - ./loki/rules_source:/loki/rules_source:ro  # Rules tĩnh từ source code (read-only)
+      - loki_rules_storage:/loki/rules_storage    # Rules động từ API (read-write)
+      - loki_data:/loki
     networks:
       - monitoring_swarm
     deploy: *deploy_config
-
-  cadvisor:
-    image: gcr.io/cadvisor/cadvisor:v0.47.0
-    volumes:
-      - /:/rootfs:ro
-      - /var/run:/var/run:ro
-      - /sys:/sys:ro
-      - /var/lib/docker/:/var/lib/docker:ro
-      - /dev/disk/:/dev/disk:ro
-      - /var/run/docker.sock:/var/run/docker.sock:rw
-    networks:
-      - monitoring_swarm
-    deploy: *deploy_config
-
+  # ============================================================================
+  # PROMETHEUS - Time-series Database
+  # ============================================================================
   prometheus:
     image: prom/prometheus:v2.53.0
+    ports:
+      - "9090:9090"
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
       - "--storage.tsdb.retention.time=7d"
       - "--storage.tsdb.retention.size=2GB"
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+      - '--web.enable-lifecycle'
+      - '--enable-feature=remote-write-receiver'  # Enable remote write từ Alloy
     volumes:
-      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus/prometheus.optimized.yml:/etc/prometheus/prometheus.yml:ro
       - prometheus_data:/prometheus
     networks:
       - monitoring_swarm
     deploy: *deploy_config
 
+  # ============================================================================
+  # GRAFANA - Visualization
+  # ============================================================================
   grafana:
     image: grafana/grafana:10.3.3
     ports:
       - "3456:3000"
     volumes:
+      - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+      - ./grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
       - grafana_data:/var/lib/grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
     networks:
       - monitoring_swarm
     deploy: *deploy_config
@@ -111,6 +139,9 @@ volumes:
   nginx_logs:
   grafana_data:
   prometheus_data:
+  loki_data:
+  loki_rules_storage:  # Volume cho rules được tạo qua API
+  alloy_data:
 
 networks:
   monitoring_swarm:

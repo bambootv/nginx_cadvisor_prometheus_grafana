@@ -7,3 +7,6 @@ groups:
 
       - record: loki_nginx_requests_total_by_verb_1m
         expr: sum by (verb, resp_code, request) (count_over_time({job="nginx"}[1m]))
+
+      - record: loki_nginx_requests_total_by_verb_15s
+        expr: sum by (verb, resp_code, request) (count_over_time({job="nginx"}[15s]))

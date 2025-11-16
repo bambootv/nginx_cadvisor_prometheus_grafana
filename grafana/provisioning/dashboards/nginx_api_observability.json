@@ -41,7 +41,7 @@
             "title": "Requests (Selected Range)",
             "gridPos": {
                 "h": 4,
-                "w": 8,
+                "w": 6,
                 "x": 0,
                 "y": 1
             },
@@ -52,7 +52,7 @@
             "targets": [
                 {
                     "refId": "A",
-                    "expr": "sum(sum_over_time(loki_nginx_requests_total_by_verb_1m{request=~\"$request\", verb=~\"$verb\", resp_code=~\"$resp_code\"}[$__range]))",
+                    "expr": "sum(sum_over_time(loki_nginx_requests_total_by_verb_15s{request=~\"$request\", verb=~\"$verb\", resp_code=~\"$resp_code\"}[$__range]))",
                     "range": false
                 }
             ],
@@ -93,8 +93,8 @@
             "title": "Server Error Rate (%)",
             "gridPos": {
                 "h": 4,
-                "w": 8,
-                "x": 8,
+                "w": 6,
+                "x": 6,
                 "y": 1
             },
             "datasource": {
@@ -104,7 +104,7 @@
             "targets": [
                 {
                     "refId": "A",
-                    "expr": "(sum(sum_over_time(loki_nginx_requests_total_by_verb_1m{resp_code=~\"5..\", request=~\"$request\", verb=~\"$verb\"}[$__range])) / clamp_min(sum(sum_over_time(loki_nginx_requests_total_by_verb_1m{request=~\"$request\", verb=~\"$verb\", resp_code=~\"$resp_code\"}[$__range])), 1)) * 100",
+                    "expr": "(sum(sum_over_time(loki_nginx_requests_total_by_verb_15s{resp_code=~\"5..\", request=~\"$request\", verb=~\"$verb\"}[$__range])) / clamp_min(sum(sum_over_time(loki_nginx_requests_total_by_verb_15s{request=~\"$request\", verb=~\"$verb\", resp_code=~\"$resp_code\"}[$__range])), 1)) * 100",
                     "range": false
                 }
             ],
@@ -153,8 +153,8 @@
             "title": "Latency P95",
             "gridPos": {
                 "h": 4,
-                "w": 4,
-                "x": 16,
+                "w": 6,
+                "x": 12,
                 "y": 1
             },
             "datasource": {
@@ -208,8 +208,8 @@
             "title": "Latency P99",
             "gridPos": {
                 "h": 4,
-                "w": 4,
-                "x": 20,
+                "w": 6,
+                "x": 18,
                 "y": 1
             },
             "datasource": {
@@ -272,7 +272,7 @@
         },
         {
             "id": 201,
-            "type": "barchart",
+            "type": "table",
             "title": "Top 10 APIs by Requests (Range)",
             "gridPos": {
                 "h": 9,
@@ -287,26 +287,34 @@
             "targets": [
                 {
                     "refId": "A",
-                    "expr": "topk(10, sum by (request, verb) (sum_over_time(loki_nginx_requests_total_by_verb_1m{request=~\"$request\", verb=~\"$verb\", resp_code=~\"$resp_code\"}[$__range])))",
-                    "instant": true,
-                    "range": false
+                    "expr": "topk(10, sum by (request, verb) (sum_over_time(loki_nginx_requests_total_by_verb_15s{resp_code=~\"$resp_code\", request=~\"$request\", verb=~\"$verb\"}[$__range])))",
+                    "format": "table",
+                    "instant": true
+                }
+            ],
+            "transformations": [
+                {
+                    "id": "labelsToFields",
+                    "options": {}
                 }
             ],
             "fieldConfig": {
                 "defaults": {
                     "unit": "short",
                     "custom": {
-                        "drawStyle": "bars"
+                        "align": "auto"
                     }
                 },
                 "overrides": []
             },
             "options": {
-                "displayMode": "gradient",
-                "legend": {
-                    "displayMode": "hidden"
-                },
-                "orientation": "horizontal"
+                "showHeader": true,
+                "sortBy": [
+                    {
+                        "displayName": "Value",
+                        "desc": true
+                    }
+                ]
             }
         },
         {
@@ -326,7 +334,7 @@
             "targets": [
                 {
                     "refId": "A",
-                    "expr": "topk(10, sum by (request, verb, resp_code) (sum_over_time(loki_nginx_requests_total_by_verb_1m{resp_code=~\"5..\", request=~\"$request\", verb=~\"$verb\"}[$__range])))",
+                    "expr": "topk(10, sum by (request, verb, resp_code) (sum_over_time(loki_nginx_requests_total_by_verb_15s{resp_code=~\"5..\", request=~\"$request\", verb=~\"$verb\"}[$__range])))",
                     "format": "table",
                     "instant": true,
                     "range": false
@@ -376,7 +384,7 @@
             "targets": [
                 {
                     "refId": "A",
-                    "expr": "topk(10, sum by (request, verb, resp_code) (sum_over_time(loki_nginx_requests_total_by_verb_1m{resp_code=~\"4..\", request=~\"$request\", verb=~\"$verb\"}[$__range])))",
+                    "expr": "topk(10, sum by (request, verb, resp_code) (sum_over_time(loki_nginx_requests_total_by_verb_15s{resp_code=~\"4..\", request=~\"$request\", verb=~\"$verb\"}[$__range])))",
                     "format": "table",
                     "instant": true,
                     "range": false
@@ -426,7 +434,7 @@
             "targets": [
                 {
                     "refId": "A",
-                    "expr": "topk(10, histogram_quantile(0.95, sum by (le, request, verb) (increase(loki_process_custom_nginxlog_request_duration_seconds_bucket{request=~\"$request\", verb=~\"$verb\", resp_code=~\"$resp_code\"}[$__range]))))",
+                    "expr": "topk(10, histogram_quantile(0.95, sum by (le, request, verb) (increase(loki_process_custom_nginxlog_request_duration_seconds_bucket{request=~\"$request\", verb=~\"$verb\", resp_code=~\"$resp_code\"}[$__range])))>=0)",
                     "format": "table",
                     "instant": true,
                     "range": false

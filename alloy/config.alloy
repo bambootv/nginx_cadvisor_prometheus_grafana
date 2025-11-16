@@ -89,48 +89,10 @@ prometheus.scrape "nginx" {
 }
 
 // ============================================================================
-// NGINX LOGS → LOKI (Thay inputs.tail)
+// NGINX LOGS → LOKI (from Docker logs)
+// Note: Nginx logs are now sent to stdout/stderr and collected via Docker
+// Nginx-specific log processing is done in loki.process.docker_logs below
 // ============================================================================
-loki.source.file "nginx_access" {
-  targets = [{
-    __path__  = "/var/log/nginx/access.log",
-    job       = "nginx",
-    instance  = "nginx",
-  }]
-  forward_to = [loki.process.nginx.receiver]
-}
-
-loki.process "nginx" {
-  forward_to = [loki.write.loki.receiver]
-
-  stage.regex {
-    expression = "^(?P<client>\\S+) (?P<ident>\\S+) (?P<auth>\\S+) \\[(?P<timestamp>[^\\]]+)\\] \"(?P<verb>\\S+) (?P<request>[^\"]+) (?P<httpversion>\\S+)\" (?P<status>\\d+) (?P<response>\\d+) \"(?P<referrer>[^\"]*)\" \"(?P<agent>[^\"]*)\" \"(?P<req_time>\\d+\\.\\d+)\"$"
-  }
-
-  // Trích xuất phần đường dẫn gốc trước dấu "?" và lưu vào một trường mới.
-   stage.regex {
-    source     = "request"
-    expression = "^(?P<request_path>[^?]+)"
-  }
-
-  stage.labels {
-    values = {
-      verb      = "verb",
-      request   = "request_path",
-      resp_code = "status",
-    }
-  }
-
-  stage.metrics {
-    metric.histogram {
-      name        = "nginxlog_request_duration_seconds"
-      description = "Distribution of NGINX request processing times, from logs."
-      source      = "req_time" // Lấy giá trị từ trường req_time đã parse ở Giai đoạn 1
-      prefix      = ""
-      buckets     = [0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10]
-    }
-  }
-}
 
 // ============================================================================
 // DOCKER CONTAINER LOGS → LOKI
@@ -254,11 +216,50 @@ loki.source.docker "containers" {
   forward_to = [loki.process.docker_logs.receiver]
 }
 
-// Process để thêm log level detection
+// Process để thêm log level detection và nginx log parsing
 loki.process "docker_logs" {
   forward_to = [loki.write.loki.receiver]
 
-  // Detect log level (error, warn, info, debug)
+  // Parse NGINX access logs (only for nginx container)
+  stage.match {
+    selector = "{compose_service=\"monitoring_nginx\"}"
+
+    stage.regex {
+      expression = "^(?P<client>\\S+) (?P<ident>\\S+) (?P<auth>\\S+) \\[(?P<timestamp>[^\\]]+)\\] \"(?P<verb>\\S+) (?P<request>[^\"]+) (?P<httpversion>\\S+)\" (?P<status>\\d+) (?P<response>\\d+) \"(?P<referrer>[^\"]*)\" \"(?P<agent>[^\"]*)\" \"(?P<req_time>\\d+\\.\\d+)\"$"
+    }
+
+    // Extract request path (before query string)
+    stage.regex {
+      source     = "request"
+      expression = "^(?P<request_path>[^?]+)"
+    }
+
+    stage.labels {
+      values = {
+        verb      = "verb",
+        request   = "request_path",
+        resp_code = "status",
+      }
+    }
+
+    stage.static_labels {
+      values = {
+        job = "nginx",
+      }
+    }
+
+    stage.metrics {
+      metric.histogram {
+        name        = "nginxlog_request_duration_seconds"
+        description = "Distribution of NGINX request processing times, from logs."
+        source      = "req_time"
+        prefix      = ""
+        buckets     = [0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10]
+      }
+    }
+  }
+
+  // Detect log level (error, warn, info, debug) for all containers
   stage.regex {
     expression = "(?i)(?P<level>error|err|fatal|panic|warn|warning|info|debug)"
   }
@@ -266,7 +267,7 @@ loki.process "docker_logs" {
   // Extract log level as label
   stage.labels {
     values = {
-      level = "",
+      level = "level",
     }
   }
 }

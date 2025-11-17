@@ -6,13 +6,17 @@ logging {
 // ============================================================================
 // PROMETHEUS REMOTE WRITE
 // ============================================================================
-prometheus.remote_write "prometheus" {
+prometheus.remote_write "prometheus_cloud" {
   endpoint {
-    url = "http://prometheus:9090/api/v1/write"
+    url = env("GRAFANA_CLOUD_PROM_URL")
     queue_config {
       capacity             = 10000
       max_shards           = 10
       max_samples_per_send = 5000
+    }
+    basic_auth {
+      username = env("GRAFANA_CLOUD_PROM_USER")
+      password = env("GRAFANA_CLOUD_API_KEY")
     }
   }
 }
@@ -43,7 +47,7 @@ prometheus.exporter.unix "system" {
 
 prometheus.scrape "system" {
   targets         = prometheus.exporter.unix.system.targets
-  forward_to      = [prometheus.remote_write.prometheus.receiver]
+  forward_to      = [prometheus.remote_write.prometheus_cloud.receiver]
   scrape_interval = "15s"
 }
 
@@ -63,7 +67,7 @@ prometheus.scrape "cadvisor" {
 }
 
 prometheus.relabel "cadvisor" {
-  forward_to = [prometheus.remote_write.prometheus.receiver]
+  forward_to = [prometheus.remote_write.prometheus_cloud.receiver]
 
   rule {
     source_labels = ["__address__"]
@@ -85,7 +89,7 @@ prometheus.scrape "nginx" {
     },
   ]
 
-  forward_to = [prometheus.remote_write.prometheus.receiver]
+  forward_to = [prometheus.remote_write.prometheus_cloud.receiver]
 }
 
 // ============================================================================
@@ -218,7 +222,7 @@ loki.source.docker "containers" {
 
 // Process để thêm log level detection và nginx log parsing
 loki.process "docker_logs" {
-  forward_to = [loki.write.loki.receiver]
+  forward_to = [loki.write.loki_cloud.receiver]
 
   // Parse NGINX access logs (only for nginx container)
   stage.match {
@@ -272,9 +276,15 @@ loki.process "docker_logs" {
   }
 }
 
-loki.write "loki" {
+loki.write "loki_cloud" {
   endpoint {
-    url = "http://loki:3102/loki/api/v1/push"
+    url = env("GRAFANA_CLOUD_LOKI_URL")
+
+    // SỬ DỤNG CREDENTIALS CỦA LOKI
+    basic_auth {
+      username = env("GRAFANA_CLOUD_LOKI_USER")
+      password = env("GRAFANA_CLOUD_API_KEY")
+    }
   }
 }
 
@@ -284,7 +294,7 @@ loki.write "loki" {
 prometheus.exporter.self "alloy" {}
 
 prometheus.relabel "alloy_self_labels" {
-  forward_to = [prometheus.remote_write.prometheus.receiver]
+  forward_to = [prometheus.remote_write.prometheus_cloud.receiver]
 
   rule {
     action       = "replace"

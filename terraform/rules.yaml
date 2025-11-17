@@ -1,0 +1,12 @@
+# ./terraform/rules.yaml
+---
+name: NginxRecordingRules
+rules:
+  - record: loki:nginx_requests:rate_by_verb:5m
+    expr: sum by (verb, resp_code, request) (rate({job="nginx"}[5m]))
+
+  - record: loki:nginx_requests:total_by_verb:1m
+    expr: sum by (verb, resp_code, request) (count_over_time({job="nginx"}[1m]))
+
+  - record: loki:nginx_requests:total_by_verb:15s
+    expr: sum by (verb, resp_code, request) (count_over_time({job="nginx"}[15s]))

@@ -1,19 +1,12 @@
 global:
-  scrape_interval: 5s
+  scrape_interval: 15s
+  evaluation_interval: 15s
 
-scrape_configs:
-  - job_name: "telegraf"
-    static_configs:
-      - targets: ["telegraf:9273"]
+# ============================================================================
+# Stack Optimized: Alloy + Loki
+#
+# Alloy push metrics qua remote_write (system / container / nginx / access logs)
+# Prometheus chỉ cần scrape Alloy self-metrics (optional)
+# ============================================================================
 
-  - job_name: "cadvisor"
-    static_configs:
-      - targets: ["cadvisor:8080"]
-
-  - job_name: "nginx"
-    static_configs:
-      - targets: ["nginx_prometheus_exporter:9113"]
-
-  - job_name: "node_exporter"
-    static_configs:
-      - targets: ["node_exporter:9100"]
+scrape_configs: [] # Alloy pushes metrics via remote_write

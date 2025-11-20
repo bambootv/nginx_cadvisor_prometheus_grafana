@@ -1,10 +1,3 @@
-# VPS Intel/AMD 64-bit (Linux)
-build_linux:
-	docker build -t nginx:stub_status --platform linux/amd64 .
-# VPS Apple Silicon (Mac)
-build_mac:
-	docker build -t nginx:stub_status --platform linux/arm64 .
-
 swarm:
 	docker swarm init --advertise-addr 127.0.0.1
 stack:

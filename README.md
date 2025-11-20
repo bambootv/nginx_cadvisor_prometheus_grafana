@@ -1,118 +1,291 @@
-## Nginx + Alloy + Prometheus + Loki Stack
+# Nginx + Alloy + Prometheus + Loki Stack
 
-A modernized observability stack bundling Nginx, Grafana Alloy, Prometheus, Loki, and Grafana in a single project. Alloy collects host/container metrics plus all container logs (forwarded to Loki). Request-level dashboards read directly from Loki, so no extra Telegraf/sidecar is required.
+Stack monitoring hiện đại với Nginx, Grafana Alloy, Prometheus, Loki và Grafana. Tất cả logs và metrics được thu thập tự động, không cần sidecar hay cấu hình phức tạp.
 
-### Table of Contents
+## 🚀 Hướng Dẫn Chạy
 
-- [Architecture](#architecture)
-- [Data Flow](#data-flow)
-- [Components](#components)
-- [Prepare Nginx Assets](#prepare-nginx-assets)
-- [Run with Docker Compose](#run-with-docker-compose)
-- [Run with Docker Swarm](#run-with-docker-swarm)
-- [Grafana Provisioning](#grafana-provisioning)
-- [Directory Layout](#directory-layout)
-- [Customize Alloy](#customize-alloy)
-- [Cleanup](#cleanup)
-
-### Architecture
-
-```
-                                   Docker Host
-┌─────────────────────────────────────────────────────────────────────────────┐
-│ Shared volumes                                                             │
-│  • prometheus_data, grafana_data, loki_data (Compose only)                  │
-│                                                                             │
-│ Mounted host paths                                                          │
-│  • /proc, /sys, / → alloy (for host stats)                                 │
-│  • /var/run/docker.sock → alloy (for container discovery/logs)              │
-│                                                                             │
-│ Containers                                                                  │
-│  • nginx              – reverse proxy, logs to stdout/stderr                │
-│  • alloy              – Grafana Alloy collector (metrics + logs endpoint)   │
-│  • prometheus         – scrapes Alloy metrics & receives remote_write       │
-│  • loki               – ingests logs from Alloy (port 3102)                 │
-│  • grafana            – dashboards + log explorer (port 3456)               │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
-
-### Data Flow
-
-```mermaid
-flowchart TB
-  subgraph Host["Docker Host"]
-    nginx[[Nginx]] -- "stdout/stderr\n(Docker logging driver)" --> alloy
-    others[(Other containers)] -- "stdout/stderr\nvia docker.sock" --> alloy
-
-    alloy[[Grafana Alloy]]
-    prom[[Prometheus]]
-    loki[[Loki]]
-    grafana[[Grafana]]
-    remote[(Remote write target)]
-
-    alloy -- "push logs" --> loki
-    alloy -- "/metrics (12345)\nremote_write" --> prom
-  end
-
-  prom -- "dashboards & alerts" --> grafana
-  loki -- "log explorer + LogQL metrics" --> grafana
-  prom -- "remote_write" --> remote
-
-  dockerSock[/var/run/docker.sock/] -. read-only mount .-> alloy
-  hostFS[/host FS:\n/proc, /sys, /\ ] -. read-only mount .-> alloy
-```
-
-### Components
-
-- `nginx`: reverse proxy image stored in `docker-compose.dev.yml` / `docker-compose.prod.yml`; logs are streamed to stdout/stderr so Docker can enforce `max-size`/`max-file`.
-- `alloy`: Grafana Alloy collector defined in both Compose files with mounts for `/var/run/docker.sock`, `/proc`, `/sys`, `/`. Handles log tailing, host/container metrics, and exposes `/metrics` on `12345`.
-- `prometheus`: scrapes Alloy (`/metrics`) and receives Alloy remote write; stores data in `prometheus_data`.
-- `loki`: receives pushes from Alloy at `http://loki:3102/loki/api/v1/push`, stores chunks in `loki_data` (Compose) or swarm-managed volume.
-- `grafana`: provisions Prometheus/Loki datasources and dashboards, served on `3456`.
-
-### Prepare Nginx Assets
+### Bước 1: Chuẩn bị Nginx Config
 
 ```bash
+# Copy file config mẫu (nếu chưa có)
 cp nginx/nginx_sites_available.example nginx/nginx_sites_available
+
+# Chỉnh sửa nginx config theo nhu cầu
+vim nginx/nginx.conf
+vim nginx/nginx_sites_available
 ```
 
-Customize `nginx/nginx.conf` và `nginx/nginx_sites_available` tùy theo nhu cầu. Dung lượng log được quản lý bởi Docker logging driver (xem `docker-compose.*.yml` để chỉnh `max-size`/`max-file`). Request-level charts đọc trực tiếp từ Loki, nên không cần translator phụ cho access log.
-
-
-### Run with Docker Swarm
+### Bước 2: Khởi tạo Docker Swarm (lần đầu)
 
 ```bash
-make swarm          # init swarm (first time)
-make stack          # deploy `monitoring` stack (uses docker-compose.prod.yml)
+make swarm
 ```
 
-Useful environment variables:
+Lệnh này sẽ chạy: `docker swarm init --advertise-addr 127.0.0.1`
 
-- `COMMON_REPLICAS`: shared replica count for Alloy/Prom/Loki/Grafana.
-- `NGINX_REPLICAS`: replica count for Nginx.
-
-### Grafana Provisioning
-
-- Prometheus & Loki datasources are provisioned automatically in `grafana/provisioning/datasources`.
-- Sample dashboards live in `grafana/dashboards` (for example `nginx_overview.json`).
-
-### Directory Layout
-
-- `alloy/` – collector configuration.
-- `grafana/provisioning/` – provisioned datasources and dashboards.
-- `grafana/dashboards/` – dashboard JSON files.
-- `loki/` – Loki configuration.
-- `prometheus/` – Prometheus configuration that scrapes Alloy.
-- `nginx/` – Nginx configuration.
-
-### Customize Alloy
-
-The `alloy/config.alloy` file defines the pipeline. Enable more integrations or forward metrics/logs to another destination by adding the relevant blocks, then run `docker compose restart alloy`.
-
-### Cleanup
+### Bước 3: Deploy Stack
 
 ```bash
-docker compose down -v
+# Deploy toàn bộ stack
+make stack
+
+# Hoặc chỉ deploy nginx (nếu các service khác đã chạy)
+make stack_nginx_only
 ```
 
-The command removes containers and volumes (including Prometheus/Loki/Grafana data). Drop `-v` if you want to keep the data.
+Lệnh `make stack` sẽ:
+
+- Deploy tất cả services: nginx, alloy, prometheus, loki, grafana
+- Sử dụng `docker-compose.prod.yml`
+- Tạo network `monitoring_swarm` (subnet: 10.0.3.0/24)
+
+### Bước 4: Kiểm tra Services
+
+```bash
+# Xem trạng thái services
+docker service ls
+
+# Xem logs của service
+docker service logs monitoring_nginx
+docker service logs monitoring_alloy
+docker service logs monitoring_loki
+
+# Xem chi tiết service
+docker service ps monitoring_nginx
+```
+
+### Bước 5: Truy cập Grafana
+
+- **URL**: http://localhost:3456
+- **Datasources**: Tự động provisioned (Prometheus, Loki)
+- **Dashboards**: Tự động load từ `grafana/dashboards/`
+
+## 📊 Luồng Dự Án
+
+### 1. Luồng Metrics
+
+```
+┌─────────────────────────────────────────────────────────┐
+│ HOST METRICS                                             │
+├─────────────────────────────────────────────────────────┤
+│ Alloy đọc từ: /proc, /sys, / (mounted read-only)       │
+│ → CPU, Memory, Disk, Network                            │
+│ → Scrape interval: 15s                                  │
+│ → Job: "alloy_system"                                   │
+└─────────────────────────────────────────────────────────┘
+                    ↓
+┌─────────────────────────────────────────────────────────┐
+│ CONTAINER METRICS                                        │
+├─────────────────────────────────────────────────────────┤
+│ Alloy đọc từ: /var/run/docker.sock                      │
+│ → CPU, Memory, Network per container                    │
+│ → Scrape interval: 10s                                  │
+│ → Job: "integrations/cadvisor"                          │
+└─────────────────────────────────────────────────────────┘
+                    ↓
+┌─────────────────────────────────────────────────────────┐
+│ NGINX METRICS                                            │
+├─────────────────────────────────────────────────────────┤
+│ Alloy scrape: nginx-exporter:9113                       │
+│ → Nginx stub status metrics                              │
+│ → Job: "nginx"                                          │
+└─────────────────────────────────────────────────────────┘
+                    ↓
+        Alloy → Prometheus (remote_write)
+                    ↓
+        Prometheus lưu vào prometheus_data volume
+                    ↓
+        Grafana query Prometheus để hiển thị
+```
+
+### 2. Luồng Logs
+
+```
+┌─────────────────────────────────────────────────────────┐
+│ NGINX LOGS (Quan trọng nhất)                            │
+├─────────────────────────────────────────────────────────┤
+│ 1. Nginx ghi vào /dev/stdout, /dev/stderr               │
+│ 2. Docker logging driver nhận                           │
+│    → Lưu vào /var/lib/docker/containers/<id>/*.log     │
+│    → Rotate: max-size=100m, max-file=10 (~1GB)         │
+│ 3. Alloy đọc qua docker.sock                            │
+│ 4. Alloy parse: extract verb, request_path, resp_code  │
+│ 5. Alloy push vào Loki                                   │
+│ 6. Loki lưu vào loki_data volume                          │
+│ 7. Loki Compactor cleanup sau 7 ngày                    │
+└─────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────┐
+│ CONTAINER LOGS KHÁC                                     │
+├─────────────────────────────────────────────────────────┤
+│ 1. Container ghi vào stdout/stderr                      │
+│ 2. Alloy đọc qua docker.sock                            │
+│ 3. Alloy detect log level (error/warn/info/debug)       │
+│ 4. Alloy push vào Loki                                   │
+│ 5. Loki lưu và cleanup sau 7 ngày                       │
+└─────────────────────────────────────────────────────────┘
+```
+
+### 3. Luồng Tổng Quan
+
+```
+┌──────────────┐
+│   Nginx      │ → stdout/stderr → Docker logging driver
+│  (Port 80)   │                    (rotate ~1GB)
+└──────────────┘
+       ↓
+┌──────────────┐
+│   Alloy      │ → Đọc docker.sock → Parse logs
+│ (Port 12345) │ → Đọc /proc, /sys → Collect metrics
+└──────────────┘
+       ↓                    ↓
+┌──────────────┐    ┌──────────────┐
+│    Loki      │    │  Prometheus │
+│ (Port 3102)  │    │ (Port 9090) │
+│              │    │              │
+│ Retention:   │    │ Retention:   │
+│ 7 ngày       │    │ 7d hoặc 2GB  │
+└──────────────┘    └──────────────┘
+       ↓                    ↓
+┌──────────────────────────────────┐
+│         Grafana                   │
+│       (Port 3456)                 │
+│                                   │
+│ - Query Prometheus (metrics)      │
+│ - Query Loki (logs)               │
+│ - Dashboards tự động load         │
+└──────────────────────────────────┘
+```
+
+## 🔧 Cấu Hình
+
+### Nginx
+
+- **Config**: `nginx/nginx.conf`, `nginx/nginx_sites_available`
+- **Logs**: Ghi vào `/dev/stdout`, `/dev/stderr` (Docker quản lý)
+- **Log format**: Custom format với `$request_time`
+
+### Alloy
+
+- **Config**: `alloy/config.alloy`
+- **Chức năng**:
+  - Thu thập host metrics (CPU, Memory, Disk, Network)
+  - Thu thập container metrics (cAdvisor)
+  - Thu thập tất cả container logs
+  - Parse NGINX logs (extract verb, request_path, resp_code)
+  - Detect log level (error/warn/info/debug)
+
+### Prometheus
+
+- **Config**: `prometheus/prometheus.yml`
+- **Retention**: 7 ngày hoặc 2GB (lấy giá trị nhỏ hơn)
+- **Nhận metrics**: Từ Alloy qua remote_write
+
+### Loki
+
+- **Config**: `loki/local-config.yaml`
+- **Retention**: 7 ngày (tự động cleanup)
+- **Ingestion limit**: 10MB/s, burst 20MB
+- **Compactor**: Tự động cleanup mỗi 10 phút
+
+### Grafana
+
+- **Datasources**: Tự động provisioned từ `grafana/provisioning/datasources/`
+- **Dashboards**: Tự động load từ `grafana/dashboards/`
+- **Port**: 3456 (mapped từ 3000)
+
+## 📁 Cấu Trúc Thư Mục
+
+```
+.
+├── alloy/
+│   └── config.alloy              # Alloy configuration
+├── grafana/
+│   ├── dashboards/               # Dashboard JSON files
+│   │   ├── requests_overview.json
+│   │   ├── container_logs.json
+│   │   └── system_overview.json
+│   └── provisioning/            # Auto-provisioned configs
+│       ├── datasources/
+│       └── dashboards/
+├── loki/
+│   ├── local-config.yaml         # Loki configuration
+│   └── rules_source/             # Loki rules
+├── nginx/
+│   ├── nginx.conf                # Nginx main config
+│   ├── nginx_sites_available     # Nginx sites config
+│   └── nginx_sites_available.example
+├── prometheus/
+│   └── prometheus.yml            # Prometheus config
+├── docker-compose.prod.yml       # Docker Swarm config
+├── Makefile                      # Helper commands
+└── README.md
+```
+
+## 🗄️ Log Retention & Size Limits
+
+### Nginx Logs (Quan trọng nhất)
+
+- **Docker logging driver**: `max-size: 100m`, `max-file: 10`
+- **Tổng tối đa**: ~1GB (tự động rotate)
+- **Vị trí**: `/var/lib/docker/containers/<id>/*.log` (Docker quản lý)
+
+### Prometheus
+
+- **Retention**: 7 ngày hoặc 2GB (lấy giá trị nhỏ hơn)
+- **Storage**: `prometheus_data` volume
+
+### Loki
+
+- **Retention**: 7 ngày (tự động cleanup bởi Compactor)
+- **Ingestion limit**: 10MB/s, burst 20MB
+- **Storage**: `loki_data` volume
+- **Compactor**: Chạy mỗi 10 phút, tự động xóa dữ liệu > 7 ngày
+
+### Container Logs Khác
+
+- **Không giới hạn** Docker logging driver (logs ít)
+- **Được quản lý** bởi Loki retention (7 ngày)
+
+**Tổng dung lượng ước tính**: ~3-4GB (chủ yếu là Nginx logs)
+
+## 🧹 Cleanup
+
+```bash
+# Xóa stack
+docker stack rm monitoring
+
+# Xóa stack + volumes (xóa tất cả data)
+docker stack rm monitoring
+docker volume prune -f
+```
+
+## 🌐 Ports & Access
+
+| Service    | Port  | URL                    | Mô tả                     |
+| ---------- | ----- | ---------------------- | ------------------------- |
+| Nginx      | 80    | http://localhost       | Reverse proxy             |
+| Grafana    | 3456  | http://localhost:3456  | Dashboards & Log Explorer |
+| Prometheus | 9090  | http://localhost:9090  | Prometheus UI             |
+| Loki       | 3102  | http://localhost:3102  | Loki API                  |
+| Alloy      | 12345 | http://localhost:12345 | Alloy metrics endpoint    |
+
+## 📝 Environment Variables
+
+Khi deploy với `make stack`:
+
+- `COMMON_REPLICAS`: Số replicas cho Alloy/Prometheus/Loki/Grafana (default: 1)
+- `NGINX_REPLICAS`: Số replicas cho Nginx (default: 1)
+
+Ví dụ:
+
+```bash
+COMMON_REPLICAS=2 NGINX_REPLICAS=2 make stack
+```
+
+## 📚 Tài Liệu Tham Khảo
+
+- [Grafana Alloy Docs](https://grafana.com/docs/alloy/latest/)
+- [Prometheus Docs](https://prometheus.io/docs/)
+- [Loki Docs](https://grafana.com/docs/loki/latest/)
+- [Grafana Docs](https://grafana.com/docs/grafana/latest/)

@@ -1,24 +1,17 @@
 {
-  "__inputs": [],
-  "__requires": [
-    {
-      "type": "datasource",
-      "id": "loki",
-      "name": "Loki"
-    },
-    {
-      "type": "panel",
-      "name": "Logs",
-      "id": "logs"
-    }
-  ],
   "annotations": {
     "list": [
       {
-        "name": "Annotations & Alerts",
-        "type": "dashboard",
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
         "enable": true,
-        "datasource": "Loki"
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
       }
     ]
   },
@@ -26,142 +19,176 @@
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
   "id": null,
-  "iteration": 1700000000000,
   "links": [],
+  "liveNow": false,
   "panels": [
     {
       "datasource": "Loki",
       "gridPos": {
-        "h": 12,
+        "h": 8,
         "w": 12,
         "x": 0,
         "y": 0
       },
-      "id": 2,
-      "maxPerRow": 2,
-      "repeat": "priority",
-      "repeatDirection": "h",
+      "id": 100,
       "options": {
-        "dedupStrategy": "signature",
+        "dedupStrategy": "none",
         "enableLogDetails": true,
         "prettifyLogMessage": false,
-        "showCommonLabels": true,
-        "showLabels": true,
-        "showSearch": true,
+        "showCommonLabels": false,
+        "showLabels": false,
         "showTime": true,
         "sortOrder": "Descending",
-        "wrapLogMessage": true
+        "wrapLogMessage": false
       },
       "targets": [
         {
-          "expr": "{source=\"docker\", service=~\"$priority\"}",
+          "datasource": "Loki",
+          "editorMode": "code",
+          "expr": "{stack_name=~\"$stack\", service_name=~\".*backend.*\"}",
           "queryType": "range",
           "refId": "A"
         }
       ],
-      "title": "Container Logs - $priority",
+      "title": "Backend Services Logs",
       "type": "logs"
     },
     {
       "datasource": "Loki",
       "gridPos": {
-        "h": 12,
+        "h": 8,
         "w": 12,
-        "x": 0,
-        "y": 12
+        "x": 12,
+        "y": 0
       },
-      "id": 4,
-      "maxPerRow": 2,
-      "repeat": "container",
-      "repeatDirection": "h",
+      "id": 101,
       "options": {
-        "dedupStrategy": "signature",
+        "dedupStrategy": "none",
         "enableLogDetails": true,
         "prettifyLogMessage": false,
-        "showCommonLabels": true,
-        "showLabels": true,
-        "showSearch": true,
+        "showCommonLabels": false,
+        "showLabels": false,
         "showTime": true,
         "sortOrder": "Descending",
-        "wrapLogMessage": true
+        "wrapLogMessage": false
       },
       "targets": [
         {
-          "expr": "{source=\"docker\", service=~\"$container\"}",
+          "datasource": "Loki",
+          "editorMode": "code",
+          "expr": "{stack_name=~\"$stack\", service_name=~\".*frontend.*\"}",
           "queryType": "range",
           "refId": "A"
         }
       ],
-      "title": "Container Logs - $container",
+      "title": "Frontend Services Logs",
+      "type": "logs"
+    },
+    {
+      "datasource": "Loki",
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 0,
+        "y": 8
+      },
+      "id": 2,
+      "options": {
+        "dedupStrategy": "none",
+        "enableLogDetails": true,
+        "prettifyLogMessage": false,
+        "showCommonLabels": false,
+        "showLabels": false,
+        "showTime": true,
+        "sortOrder": "Descending",
+        "wrapLogMessage": false
+      },
+      "repeat": "service",
+      "repeatDirection": "h",
+      "maxPerRow": 2,
+      "targets": [
+        {
+          "datasource": "Loki",
+          "editorMode": "code",
+          "expr": "{stack_name=~\"$stack\", service_name=~\"$service\"}",
+          "queryType": "range",
+          "refId": "A"
+        }
+      ],
+      "title": "$service Logs",
       "type": "logs"
     }
   ],
   "refresh": "10s",
-  "schemaVersion": 39,
+  "schemaVersion": 38,
   "style": "dark",
   "tags": [
-    "containers",
     "logs",
+    "containers",
+    "docker",
+    "loki",
     "alloy"
   ],
   "templating": {
     "list": [
       {
-        "type": "custom",
-        "name": "priority",
-        "label": "Priority Containers",
-        "query": "ai_school_local_backend,ai_school_local_frontend",
-        "options": [
-          {
-            "text": "ai_school_local_backend",
-            "value": "ai_school_local_backend",
-            "selected": true
-          },
-          {
-            "text": "ai_school_local_frontend",
-            "value": "ai_school_local_frontend",
-            "selected": true
-          }
-        ],
+        "allValue": ".+",
         "current": {
-          "selected": true,
-          "text": "ai_school_local_backend + ai_school_local_frontend",
-          "value": [
-            "ai_school_local_backend",
-            "ai_school_local_frontend"
-          ]
+          "selected": false,
+          "text": "All",
+          "value": "$__all"
         },
-        "multi": true,
-        "includeAll": false,
-        "skipUrlSync": false,
-        "sort": 1
-      },
-      {
         "datasource": "Loki",
-        "definition": "label_values({source=\"docker\", service!~\"ai_school_local_backend|ai_school_local_frontend\"}, service)",
+        "definition": "",
         "hide": 0,
         "includeAll": true,
-        "label": "Containers",
-        "multi": true,
-        "name": "container",
+        "label": "Stack/Project",
+        "multi": false,
+        "name": "stack",
         "options": [],
-        "query": "label_values({source=\"docker\", service!~\"ai_school_local_backend|ai_school_local_frontend\"}, service)",
+        "query": {
+          "label": "stack_name",
+          "refId": "LokiVariableQueryEditor-VariableQuery",
+          "stream": "",
+          "type": 1
+        },
         "refresh": 1,
-        "regex": "",
+        "regex": "/.+/",
         "skipUrlSync": false,
         "sort": 1,
-        "type": "query",
+        "type": "query"
+      },
+      {
+        "allValue": "^(?!.*backend)(?!.*frontend).+",
         "current": {
-          "selected": true,
+          "selected": false,
           "text": "All",
-          "value": ".*"
+          "value": "$__all"
         },
-        "allValue": ".*"
+        "datasource": "Loki",
+        "definition": "",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Service",
+        "multi": true,
+        "name": "service",
+        "options": [],
+        "query": {
+          "label": "service_name",
+          "refId": "LokiVariableQueryEditor-VariableQuery",
+          "stream": "{stack_name=~\"$stack\", service_name!~\".*backend.*\", service_name!~\".*frontend.*\"}",
+          "type": 1
+        },
+        "refresh": 1,
+        "regex": "/^(?!.*backend)(?!.*frontend).+/",
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
       }
     ]
   },
   "time": {
-    "from": "now-1h",
+    "from": "now-15m",
     "to": "now"
   },
   "timepicker": {
@@ -171,11 +198,14 @@
       "30s",
       "1m",
       "5m",
-      "15m"
+      "15m",
+      "30m",
+      "1h"
     ]
   },
   "timezone": "",
-  "title": "Container Logs Overview",
-  "uid": null,
-  "version": 1
+  "title": "Container Logs Dashboard",
+  "uid": "container-logs",
+  "version": 1,
+  "weekStart": ""
 }

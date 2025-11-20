@@ -1,6 +1,6 @@
 ## Nginx + Alloy + Prometheus + Loki Stack
 
-A modernized observability stack bundling Nginx, Grafana Alloy, Prometheus, Loki, Telegraf, and Grafana in a single project. Alloy collects host/container metrics while Telegraf exposes Nginx-specific metrics (stub_status and nginxlog_*) for dashboard 14900.
+A modernized observability stack bundling Nginx, Grafana Alloy, Prometheus, Loki, and Grafana in a single project. Alloy collects host/container metrics plus all container logs (forwarded to Loki). Request-level dashboards read directly from Loki, so no extra Telegraf/sidecar is required.
 
 ### Table of Contents
 
@@ -21,8 +21,6 @@ A modernized observability stack bundling Nginx, Grafana Alloy, Prometheus, Loki
                                    Docker Host
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │ Shared volumes                                                             │
-│  • nginx_logs  → nginx:/var/log/nginx, alloy:/var/log/nginx,                │
-│                     telegraf:/var/log/nginx                                 │
 │  • prometheus_data, grafana_data, loki_data (Compose only)                  │
 │                                                                             │
 │ Mounted host paths                                                          │
@@ -30,11 +28,10 @@ A modernized observability stack bundling Nginx, Grafana Alloy, Prometheus, Loki
 │  • /var/run/docker.sock → alloy (for container discovery/logs)              │
 │                                                                             │
 │ Containers                                                                  │
-│  • nginx              – reverse proxy, writes access/error logs             │
+│  • nginx              – reverse proxy, logs to stdout/stderr                │
 │  • alloy              – Grafana Alloy collector (metrics + logs endpoint)   │
-│  • telegraf           – exports nginx stub_status + nginxlog_* metrics      │
-│  • prometheus         – scrapes alloy + telegraf                            │
-│  • loki               – ingests logs from alloy (port 3102)                 │
+│  • prometheus         – scrapes Alloy metrics & receives remote_write       │
+│  • loki               – ingests logs from Alloy (port 3102)                 │
 │  • grafana            – dashboards + log explorer (port 3456)               │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -44,11 +41,10 @@ A modernized observability stack bundling Nginx, Grafana Alloy, Prometheus, Loki
 ```mermaid
 flowchart TB
   subgraph Host["Docker Host"]
-    nginx[[Nginx]] -- "access/error logs\n(nginx_logs volume)" --> alloy
+    nginx[[Nginx]] -- "stdout/stderr\n(Docker logging driver)" --> alloy
     others[(Other containers)] -- "stdout/stderr\nvia docker.sock" --> alloy
 
     alloy[[Grafana Alloy]]
-    telegraf[[Telegraf]]
     prom[[Prometheus]]
     loki[[Loki]]
     grafana[[Grafana]]
@@ -56,11 +52,10 @@ flowchart TB
 
     alloy -- "push logs" --> loki
     alloy -- "/metrics (12345)\nremote_write" --> prom
-    telegraf -- "/metrics (9273)\nnginx stub_status & nginxlog_*" --> prom
   end
 
   prom -- "dashboards & alerts" --> grafana
-  loki -- "log explorer" --> grafana
+  loki -- "log explorer + LogQL metrics" --> grafana
   prom -- "remote_write" --> remote
 
   dockerSock[/var/run/docker.sock/] -. read-only mount .-> alloy
@@ -69,10 +64,9 @@ flowchart TB
 
 ### Components
 
-- `nginx`: reverse proxy image stored in `docker-compose.dev.yml` / `docker-compose.prod.yml`; writes to `nginx_logs`. Cron + logrotate chạy bên trong container (cấu hình tại `nginx/logrotate.conf`).
-- `alloy`: Grafana Alloy collector defined in both Compose files with mounts for `/var/run/docker.sock`, `/proc`, `/sys`, `/`. Handles log tailing and exposes metrics on `12345`.
-- `telegraf`: reads Nginx stub status and nginxlog_* metrics from shared logs, publishes metrics on `9273`.
-- `prometheus`: scrapes Alloy (`/metrics`) and Telegraf, stores data in `prometheus_data`. Remote write is enabled for Alloy forwarding.
+- `nginx`: reverse proxy image stored in `docker-compose.dev.yml` / `docker-compose.prod.yml`; logs are streamed to stdout/stderr so Docker can enforce `max-size`/`max-file`.
+- `alloy`: Grafana Alloy collector defined in both Compose files with mounts for `/var/run/docker.sock`, `/proc`, `/sys`, `/`. Handles log tailing, host/container metrics, and exposes `/metrics` on `12345`.
+- `prometheus`: scrapes Alloy (`/metrics`) and receives Alloy remote write; stores data in `prometheus_data`.
 - `loki`: receives pushes from Alloy at `http://loki:3102/loki/api/v1/push`, stores chunks in `loki_data` (Compose) or swarm-managed volume.
 - `grafana`: provisions Prometheus/Loki datasources and dashboards, served on `3456`.
 
@@ -80,10 +74,9 @@ flowchart TB
 
 ```bash
 cp nginx/nginx_sites_available.example nginx/nginx_sites_available
-cp nginx/logrotate.conf.example nginx/logrotate.conf
 ```
 
-Customize `nginx/nginx.conf`, `nginx/nginx_sites_available`, và `nginx/logrotate.conf` tùy theo nhu cầu. Giá trị mặc định `size 100M` và `rotate 7` giữ dung lượng log ở mức an toàn; chỉnh `nginx/logrotate.conf` rồi `docker compose restart nginx` là cron bên trong container sẽ đọc cấu hình mới, không cần rebuild image.
+Customize `nginx/nginx.conf` và `nginx/nginx_sites_available` tùy theo nhu cầu. Dung lượng log được quản lý bởi Docker logging driver (xem `docker-compose.*.yml` để chỉnh `max-size`/`max-file`). Request-level charts đọc trực tiếp từ Loki, nên không cần translator phụ cho access log.
 
 
 ### Run with Docker Swarm

@@ -1,3 +1,0 @@
-# Chạy logrotate lúc phút 5 và 35 mỗi giờ; ghi log cron khi có lỗi.
-5,35 * * * * /usr/sbin/logrotate /etc/logrotate.d/nginx >> /var/log/cron.log 2>&1
-

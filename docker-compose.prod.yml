@@ -17,15 +17,17 @@ x-deploy: &deploy_config
 
 services:
   nginx:
-    image: nginx:stub_status
+    image: nginx:1.27
     ports:
       - "80:80"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./nginx/nginx_sites_available:/etc/nginx/sites-available/default:ro
-      - ./nginx/logrotate.conf:/etc/logrotate.d/nginx:ro
-      - ./nginx/crontab:/etc/cron.d/logrotate:ro
-      - nginx_logs:/var/log/nginx
+    logging:
+      driver: local
+      options:
+        max-size: "50m"
+        max-file: "5"
     networks:
       - monitoring_swarm
     deploy:
@@ -52,14 +54,15 @@ services:
     command:
       - "run"
       - "--server.http.listen-addr=0.0.0.0:12345"
+      - "--storage.path=/var/lib/alloy/data"
       - "/etc/alloy/config.alloy"
     volumes:
       - ./alloy/config.alloy:/etc/alloy/config.alloy:ro
+      - alloy_data:/var/lib/alloy
       - /proc:/host/proc:ro
       - /sys:/host/sys:ro
       - /:/host/root:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - nginx_logs:/var/log/nginx:ro
     networks:
       - monitoring_swarm
     deploy: *deploy_config
@@ -86,10 +89,11 @@ services:
       - "3102:3102"
     command:
       - "-config.file=/etc/loki/local-config.yaml"
-      - "-querier.scheduler-address="
-      - "-frontend.scheduler-address="
     volumes:
       - ./loki/local-config.yaml:/etc/loki/local-config.yaml:ro
+      - loki_data:/loki
+      - ./loki/rules_source:/loki/rules_source:ro
+      - loki_rules_storage:/loki/rules_storage
     user: "0"
     networks:
       - monitoring_swarm
@@ -107,21 +111,12 @@ services:
       - monitoring_swarm
     deploy: *deploy_config
 
-  telegraf:
-    image: telegraf:1.29.5
-    ports:
-      - "9273:9273"
-    volumes:
-      - ./telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro
-      - nginx_logs:/var/log/nginx:ro
-    networks:
-      - monitoring_swarm
-    deploy: *deploy_config
-
 volumes:
-  nginx_logs:
   grafana_data:
   prometheus_data:
+  loki_data:
+  loki_rules_storage:
+  alloy_data:
 
 networks:
   monitoring_swarm:

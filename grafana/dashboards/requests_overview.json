@@ -26,7 +26,7 @@
   "links": [],
   "panels": [
     {
-      "datasource": "Prometheus",
+      "datasource": "Loki",
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "thresholds" },
@@ -39,83 +39,7 @@
         },
         "overrides": []
       },
-      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 0 },
-      "id": 11,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": ["lastNotNull"],
-          "fields": "",
-          "values": false
-        },
-        "textMode": "auto"
-      },
-      "targets": [
-        {
-          "expr": "sum(increase(nginx_requests{job=\"telegraf\"}[$__range]))",
-          "legendFormat": "Requests in Period",
-          "refId": "A"
-        }
-      ],
-      "title": "Requests in Selected Period",
-      "type": "stat"
-    },
-    {
-      "datasource": "Prometheus",
-      "fieldConfig": {
-        "defaults": {
-          "color": { "mode": "thresholds" },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [{ "color": "green", "value": null }]
-          },
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": { "h": 4, "w": 4, "x": 4, "y": 0 },
-      "id": 12,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": ["lastNotNull"],
-          "fields": "",
-          "values": false
-        },
-        "textMode": "auto"
-      },
-      "targets": [
-        {
-          "expr": "sum(rate(nginx_requests{job=\"telegraf\"}[1m]))",
-          "legendFormat": "Current Rate",
-          "refId": "A"
-        }
-      ],
-      "title": "Current Request Rate (req/s)",
-      "type": "stat"
-    },
-    {
-      "datasource": "Prometheus",
-      "fieldConfig": {
-        "defaults": {
-          "color": { "mode": "thresholds" },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [{ "color": "green", "value": null }]
-          },
-          "unit": "reqps"
-        },
-        "overrides": []
-      },
-      "gridPos": { "h": 4, "w": 4, "x": 8, "y": 0 },
+      "gridPos": { "h": 4, "w": 5, "x": 0, "y": 0 },
       "id": 13,
       "options": {
         "colorMode": "value",
@@ -127,16 +51,17 @@
       },
       "targets": [
         {
-          "expr": "sum(count_over_time(nginxlog_resp_bytes{job=\"telegraf\",resp_code=~\"2..\",request!=\"/nginx_status\",request=~\"/api.*\"}[5m])) / 300",
-          "legendFormat": "Avg 2xx req/s",
+          "expr": "sum(count_over_time(({job=\"nginx\"} | regexp \"\\\"(?P<verb>\\\\S+) (?P<request_path>[^\\\\?\\\\s]+)\\\\S* \\\\S+\\\" (?P<resp_code>\\\\d{3}) (?P<resp_bytes>\\\\d+) \\\".*\\\" \\\".*\\\" (?P<request_time>[\\\\d\\\\.]+)\" | request_path!=\"/nginx_status\" | request_path=~\"/api.*\" | resp_code=~\"2..\")[$__range]))",
+          "legendFormat": "2xx Volume (5m)",
+          "queryType": "range",
           "refId": "A"
         }
       ],
-      "title": "Avg 2xx Request/s",
+      "title": "2xx Volume",
       "type": "stat"
     },
     {
-      "datasource": "Prometheus",
+      "datasource": "Loki",
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "thresholds" },
@@ -145,11 +70,11 @@
             "mode": "absolute",
             "steps": [{ "color": "blue", "value": null }]
           },
-          "unit": "reqps"
+          "unit": "short"
         },
         "overrides": []
       },
-      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 4 },
+      "gridPos": { "h": 4, "w": 5, "x": 5, "y": 0 },
       "id": 21,
       "options": {
         "colorMode": "value",
@@ -161,16 +86,17 @@
       },
       "targets": [
         {
-          "expr": "sum(count_over_time(nginxlog_resp_bytes{job=\"telegraf\",resp_code=~\"3..\",request!=\"/nginx_status\",request=~\"/api.*\"}[5m])) / 300",
-          "legendFormat": "Avg 3xx req/s",
+          "expr": "sum(count_over_time(({job=\"nginx\"} | regexp \"\\\"(?P<verb>\\\\S+) (?P<request_path>[^\\\\?\\\\s]+)\\\\S* \\\\S+\\\" (?P<resp_code>\\\\d{3}) (?P<resp_bytes>\\\\d+) \\\".*\\\" \\\".*\\\" (?P<request_time>[\\\\d\\\\.]+)\" | request_path!=\"/nginx_status\" | request_path=~\"/api.*\" | resp_code=~\"3..\")[$__range]))",
+          "legendFormat": "3xx Volume (5m)",
+          "queryType": "range",
           "refId": "A"
         }
       ],
-      "title": "Avg 3xx Request/s",
+      "title": "3xx Volume",
       "type": "stat"
     },
     {
-      "datasource": "Prometheus",
+      "datasource": "Loki",
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "thresholds" },
@@ -179,11 +105,11 @@
             "mode": "absolute",
             "steps": [{ "color": "yellow", "value": null }]
           },
-          "unit": "reqps"
+          "unit": "short"
         },
         "overrides": []
       },
-      "gridPos": { "h": 4, "w": 4, "x": 4, "y": 4 },
+      "gridPos": { "h": 4, "w": 5, "x": 10, "y": 0 },
       "id": 22,
       "options": {
         "colorMode": "value",
@@ -195,16 +121,17 @@
       },
       "targets": [
         {
-          "expr": "sum(count_over_time(nginxlog_resp_bytes{job=\"telegraf\",resp_code=~\"4..\",request!=\"/nginx_status\",request=~\"/api.*\"}[5m])) / 300",
-          "legendFormat": "Avg 4xx req/s",
+          "expr": "sum(count_over_time(({job=\"nginx\"} | regexp \"\\\"(?P<verb>\\\\S+) (?P<request_path>[^\\\\?\\\\s]+)\\\\S* \\\\S+\\\" (?P<resp_code>\\\\d{3}) (?P<resp_bytes>\\\\d+) \\\".*\\\" \\\".*\\\" (?P<request_time>[\\\\d\\\\.]+)\" | request_path!=\"/nginx_status\" | request_path=~\"/api.*\" | resp_code=~\"4..\")[$__range]))",
+          "legendFormat": "4xx Volume (5m)",
+          "queryType": "range",
           "refId": "A"
         }
       ],
-      "title": "Avg 4xx Request/s",
+      "title": "4xx Volume",
       "type": "stat"
     },
     {
-      "datasource": "Prometheus",
+      "datasource": "Loki",
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "thresholds" },
@@ -213,11 +140,11 @@
             "mode": "absolute",
             "steps": [{ "color": "red", "value": null }]
           },
-          "unit": "reqps"
+          "unit": "short"
         },
         "overrides": []
       },
-      "gridPos": { "h": 4, "w": 4, "x": 8, "y": 4 },
+      "gridPos": { "h": 4, "w": 5, "x": 0, "y": 4 },
       "id": 23,
       "options": {
         "colorMode": "value",
@@ -229,16 +156,93 @@
       },
       "targets": [
         {
-          "expr": "sum(count_over_time(nginxlog_resp_bytes{job=\"telegraf\",resp_code=~\"5..\",request!=\"/nginx_status\",request=~\"/api.*\"}[5m])) / 300",
-          "legendFormat": "Avg 5xx req/s",
+          "expr": "sum(count_over_time(({job=\"nginx\"} | regexp \"\\\"(?P<verb>\\\\S+) (?P<request_path>[^\\\\?\\\\s]+)\\\\S* \\\\S+\\\" (?P<resp_code>\\\\d{3}) (?P<resp_bytes>\\\\d+) \\\".*\\\" \\\".*\\\" (?P<request_time>[\\\\d\\\\.]+)\" | request_path!=\"/nginx_status\" | request_path=~\"/api.*\" | resp_code=~\"5..\")[$__range]))",
+          "legendFormat": "5xx Volume (5m)",
+          "queryType": "range",
           "refId": "A"
         }
       ],
-      "title": "Avg 5xx Request/s",
+      "title": "5xx Volume",
       "type": "stat"
     },
     {
-      "datasource": "Prometheus",
+      "datasource": "Loki",
+      "fieldConfig": {
+        "defaults": { "unit": "ms", "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null }, { "color": "red", "value": 1000 } ] } },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 5, "x": 5, "y": 4 },
+      "id": 904,
+      "options": { "colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": { "calcs": [ "lastNotNull" ], "fields": "", "values": false }, "textMode": "auto" },
+      "targets": [
+        {
+          "expr": "max(quantile_over_time(0.95, {job=\"nginx\"} | regexp \"\\\"(?P<verb>\\\\S+) (?P<request_path>[^\\\\?\\\\s]+)\\\\S* \\\\S+\\\" (?P<resp_code>\\\\d{3}) (?P<resp_bytes>\\\\d+) \\\".*\\\" \\\".*\\\" (?P<request_time>[\\\\d\\\\.]+)\" | request_path!=\"/nginx_status\" | unwrap request_time [$__range])) * 1000",
+          "legendFormat": "P95 Latency",
+          "refId": "A"
+        }
+      ],
+      "title": "P95 Latency",
+      "type": "stat"
+    },
+    {
+      "datasource": "Loki",
+      "fieldConfig": {
+        "defaults": { "unit": "ms", "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null }, { "color": "red", "value": 1000 } ] } },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 5, "x": 10, "y": 4 },
+      "id": 907,
+      "options": { "colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": { "calcs": [ "lastNotNull" ], "fields": "", "values": false }, "textMode": "auto" },
+      "targets": [
+        {
+          "expr": "max(quantile_over_time(0.99, {job=\"nginx\"} | regexp \"\\\"(?P<verb>\\\\S+) (?P<request_path>[^\\\\?\\\\s]+)\\\\S* \\\\S+\\\" (?P<resp_code>\\\\d{3}) (?P<resp_bytes>\\\\d+) \\\".*\\\" \\\".*\\\" (?P<request_time>[\\\\d\\\\.]+)\" | request_path!=\"/nginx_status\" | unwrap request_time [$__range])) * 1000",
+          "legendFormat": "P99 Latency",
+          "refId": "A"
+        }
+      ],
+      "title": "P99 Latency",
+      "type": "stat"
+    },
+    {
+      "datasource": "Loki",
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{ "color": "green", "value": null }]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 9, "x": 15, "y": 0 },
+      "id": 205,
+      "options": {
+        "displayLabels": [],
+        "legend": {
+          "calcs": ["percent", "total"],
+          "displayMode": "list",
+          "placement": "right"
+        },
+        "pieType": "pie",
+        "tooltip": { "mode": "single" }
+      },
+      "pluginVersion": "10.3.3",
+      "targets": [
+        {
+          "expr": "topk(10, sum by (verb, request_path) (count_over_time(( {job=\"nginx\"} | regexp \"\\\"(?P<verb>\\\\S+) (?P<request_path>[^\\\\?\\\\s]+)\\\\S* \\\\S+\\\" (?P<resp_code>\\\\d{3}) (?P<resp_bytes>\\\\d+) \\\".*\\\" \\\".*\\\" (?P<request_time>[\\\\d\\\\.]+)\" | request_path!=\"/nginx_status\" | request_path=~\"/api.*\" )[$__range])))",
+          "legendFormat": "{{verb}} {{request_path}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Top API Endpoints Share (by Total Requests)",
+      "type": "piechart"
+    },
+   
+    {
+      "datasource": "Loki",
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "palette-classic" },
@@ -307,7 +311,7 @@
           }
         ]
       },
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 24 },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
       "id": 4,
       "options": {
         "legend": {
@@ -319,23 +323,17 @@
       },
       "targets": [
         {
-          "expr": "sum by (request_path) (label_replace(count by (request) (nginxlog_resp_bytes{job=\"telegraf\",resp_code=~\"2..\",request!=\"/nginx_status\",request=~\"/api.*\",agent!~\"Go-http-client.*|Prometheus.*|curl.*|Wget.*|kube-probe.*\"}), \"request_path\", \"$1\", \"request\", \"^([^?]+).*\"))",
-          "legendFormat": "{{request_path}}",
-          "refId": "A"
-        }
-      ],
-      "targets": [
-        {
-          "expr": "sum by (verb, request_path) (label_replace(count_over_time(nginxlog_resp_bytes{job=\"telegraf\",resp_code=~\"2..\",request!=\"/nginx_status\",request=~\"/api.*\"}[$__rate_interval]), \"request_path\", \"$1\", \"request\", \"^([^?]+).*\"))",
+          "expr": "sum by (verb, request_path) (count_over_time(({job=\"nginx\"} | regexp \"\\\"(?P<verb>\\\\S+) (?P<request_path>[^\\\\?\\\\s]+)\\\\S* \\\\S+\\\" (?P<resp_code>\\\\d{3}) (?P<resp_bytes>\\\\d+) \\\".*\\\" \\\".*\\\" (?P<request_time>[\\\\d\\\\.]+)\" | request_path!=\"/nginx_status\" | request_path=~\"/api.*\" | resp_code=~\"2..\" | agent!~\"Go-http-client.*|Prometheus.*|curl.*|Wget.*|kube-probe.*\")[5m]))",
           "legendFormat": "{{verb}} {{request_path}}",
+          "queryType": "range",
           "refId": "A"
         }
       ],
-      "title": "2xx Status Code Requests",
+      "title": "2xx Status Code Requests (Volume)",
       "type": "timeseries"
     },
     {
-      "datasource": "Prometheus",
+      "datasource": "Loki",
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "palette-classic" },
@@ -377,7 +375,7 @@
           }
         ]
       },
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 24 },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
       "id": 14,
       "options": {
         "legend": {
@@ -389,16 +387,17 @@
       },
       "targets": [
         {
-          "expr": "sum by (verb, request_path) (label_replace(count_over_time(nginxlog_resp_bytes{job=\"telegraf\",resp_code=~\"3..\",request!=\"/nginx_status\",request=~\"/api.*\"}[$__rate_interval]), \"request_path\", \"$1\", \"request\", \"^([^?]+).*\"))",
+          "expr": "sum by (verb, request_path) (count_over_time(({job=\"nginx\"} | regexp \"\\\"(?P<verb>\\\\S+) (?P<request_path>[^\\\\?\\\\s]+)\\\\S* \\\\S+\\\" (?P<resp_code>\\\\d{3}) (?P<resp_bytes>\\\\d+) \\\".*\\\" \\\".*\\\" (?P<request_time>[\\\\d\\\\.]+)\" | request_path!=\"/nginx_status\" | request_path=~\"/api.*\" | resp_code=~\"3..\")[5m]))",
           "legendFormat": "{{verb}} {{request_path}}",
+          "queryType": "range",
           "refId": "A"
         }
       ],
-      "title": "3xx Status Code Requests",
+      "title": "3xx Status Code Requests (Volume)",
       "type": "timeseries"
     },
     {
-      "datasource": "Prometheus",
+      "datasource": "Loki",
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "palette-classic" },
@@ -440,7 +439,7 @@
           }
         ]
       },
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 32 },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 24 },
       "id": 115,
       "options": {
         "legend": {
@@ -452,16 +451,17 @@
       },
       "targets": [
         {
-          "expr": "sum by (verb, request_path) (label_replace(count_over_time(nginxlog_resp_bytes{job=\"telegraf\",resp_code=~\"4..\",request!=\"/nginx_status\",request=~\"/api.*\"}[$__rate_interval]), \"request_path\", \"$1\", \"request\", \"^([^?]+).*\"))",
+          "expr": "sum by (verb, request_path) (count_over_time(({job=\"nginx\"} | regexp \"\\\"(?P<verb>\\\\S+) (?P<request_path>[^\\\\?\\\\s]+)\\\\S* \\\\S+\\\" (?P<resp_code>\\\\d{3}) (?P<resp_bytes>\\\\d+) \\\".*\\\" \\\".*\\\" (?P<request_time>[\\\\d\\\\.]+)\" | request_path!=\"/nginx_status\" | request_path=~\"/api.*\" | resp_code=~\"4..\")[5m]))",
           "legendFormat": "{{verb}} {{request_path}}",
+          "queryType": "range",
           "refId": "A"
         }
       ],
-      "title": "4xx Status Code Requests",
+      "title": "4xx Status Code Requests (Volume)",
       "type": "timeseries"
     },
     {
-      "datasource": "Prometheus",
+      "datasource": "Loki",
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "palette-classic" },
@@ -503,7 +503,7 @@
           }
         ]
       },
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 32 },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 24 },
       "id": 17,
       "options": {
         "legend": {
@@ -515,16 +515,17 @@
       },
       "targets": [
         {
-          "expr": "sum by (verb, request_path) (label_replace(count_over_time(nginxlog_resp_bytes{job=\"telegraf\",resp_code=~\"5..\",request!=\"/nginx_status\",request=~\"/api.*\"}[$__rate_interval]), \"request_path\", \"$1\", \"request\", \"^([^?]+).*\"))",
+          "expr": "sum by (verb, request_path) (count_over_time(({job=\"nginx\"} | regexp \"\\\"(?P<verb>\\\\S+) (?P<request_path>[^\\\\?\\\\s]+)\\\\S* \\\\S+\\\" (?P<resp_code>\\\\d{3}) (?P<resp_bytes>\\\\d+) \\\".*\\\" \\\".*\\\" (?P<request_time>[\\\\d\\\\.]+)\" | request_path!=\"/nginx_status\" | request_path=~\"/api.*\" | resp_code=~\"5..\")[5m]))",
           "legendFormat": "{{verb}} {{request_path}}",
+          "queryType": "range",
           "refId": "A"
         }
       ],
-      "title": "5xx Status Code Requests",
+      "title": "5xx Status Code Requests (Volume)",
       "type": "timeseries"
     },
     {
-      "datasource": "Prometheus",
+      "datasource": "Loki",
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "palette-classic" },
@@ -533,11 +534,11 @@
             "mode": "absolute",
             "steps": [{ "color": "green", "value": null }]
           },
-          "unit": "reqps"
+          "unit": "short"
         },
         "overrides": []
       },
-      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 12 },
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 32 },
       "id": 19,
       "options": {
         "legend": {
@@ -551,17 +552,51 @@
       },
       "targets": [
         {
-          "expr": "sum by (verb, request_path) (label_replace(sum(count_over_time(nginxlog_resp_bytes{job=\"telegraf\",request!=\"/nginx_status\",request=~\"/api.*\"}[1m])) by (request, verb) / 60, \"request_path\", \"$1\", \"request\", \"^([^?]+).*\"))",
+          "expr": "sum by (verb, request_path) (count_over_time(({job=\"nginx\"} | regexp \"\\\"(?P<verb>\\\\S+) (?P<request_path>[^\\\\?\\\\s]+)\\\\S* \\\\S+\\\" (?P<resp_code>\\\\d{3}) (?P<resp_bytes>\\\\d+) \\\".*\\\" \\\".*\\\" (?P<request_time>[\\\\d\\\\.]+)\" | request_path!=\"/nginx_status\" | request_path=~\"/api.*\")[5m]))",
           "legendFormat": "{{verb}} {{request_path}}",
+          "queryType": "range",
           "refId": "A"
         }
       ],
-      "title": "API Endpoints Request Rate",
+      "title": "API Endpoints Request Volume",
       "type": "timeseries"
     },
     {
       "datasource": "Loki",
-      "gridPos": { "h": 14, "w": 24, "x": 0, "y": 40 },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 42 },
+      "id": 902,
+      "targets": [
+        {
+          "expr": "avg_over_time({job=\"nginx\"} | regexp \"\\\"(?P<verb>\\\\S+) (?P<request_path>[^\\\\?\\\\s]+)\\\\S* \\\\S+\\\" (?P<resp_code>\\\\d{3}) (?P<resp_bytes>\\\\d+) \\\".*\\\" \\\".*\\\" (?P<request_time>[\\\\d\\\\.]+)\" | request_path!=\"/nginx_status\" | request_path=~\"/api.*\" | unwrap request_time [$__interval])",
+          "legendFormat": "Avg Response Time",
+          "refId": "A"
+        },
+        {
+          "expr": "quantile_over_time(0.95, {job=\"nginx\"} | regexp \"\\\"(?P<verb>\\\\S+) (?P<request_path>[^\\\\?\\\\s]+)\\\\S* \\\\S+\\\" (?P<resp_code>\\\\d{3}) (?P<resp_bytes>\\\\d+) \\\".*\\\" \\\".*\\\" (?P<request_time>[\\\\d\\\\.]+)\" | request_path!=\"/nginx_status\" | request_path=~\"/api.*\" | unwrap request_time [$__interval])",
+           "legendFormat": "P95 Response Time",
+           "refId": "B"
+        }
+      ],
+      "title": "Response Time (s)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "Loki",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 42 },
+      "id": 903,
+      "targets": [
+        {
+          "expr": "sum_over_time({job=\"nginx\"} | regexp \"\\\"(?P<verb>\\\\S+) (?P<request_path>[^\\\\?\\\\s]+)\\\\S* \\\\S+\\\" (?P<resp_code>\\\\d{3}) (?P<resp_bytes>\\\\d+) \\\".*\\\" \\\".*\\\" (?P<request_time>[\\\\d\\\\.]+)\" | request_path!=\"/nginx_status\" | request_path=~\"/api.*\" | unwrap resp_bytes [$__interval])",
+          "legendFormat": "Bytes Sent",
+          "refId": "A"
+        }
+      ],
+      "title": "Network Traffic (Bytes Sent)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "Loki",
+      "gridPos": { "h": 14, "w": 24, "x": 0, "y": 50 },
       "id": 300,
       "options": {
         "dedupStrategy": "none",
@@ -582,42 +617,6 @@
       ],
       "title": "Nginx Access Logs",
       "type": "logs"
-    },
-    {
-      "datasource": "Loki",
-      "fieldConfig": {
-        "defaults": {
-          "color": { "mode": "palette-classic" },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [{ "color": "green", "value": null }]
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
-      "id": 205,
-      "options": {
-        "displayLabels": [],
-        "legend": {
-          "calcs": ["percent", "total"],
-          "displayMode": "list",
-          "placement": "right"
-        },
-        "pieType": "pie",
-        "tooltip": { "mode": "single" }
-      },
-      "pluginVersion": "10.3.3",
-      "targets": [
-        {
-          "expr": "topk(10, sum by (method, request_path) (count_over_time(( {job=\"nginx\"} | regexp \"\\\"(?P<method>GET|POST|PUT|DELETE|PATCH|OPTIONS) (?P<request_path>/api[^ ?\\\"]+)\" | method=~\".+\" | request_path=~\".+\" )[$__range])))",
-          "legendFormat": "{{method}} {{request_path}}",
-          "refId": "A"
-        }
-      ],
-      "title": "Top API Endpoints Share (by Total Requests)",
-      "type": "piechart"
     }
   ],
   "refresh": "10s",

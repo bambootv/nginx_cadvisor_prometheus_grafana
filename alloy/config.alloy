@@ -3,10 +3,12 @@ logging {
   format = "logfmt"
 }
 
-prometheus.remote_write "default" {
+// ============================================================================
+// PROMETHEUS REMOTE WRITE
+// ============================================================================
+prometheus.remote_write "prometheus" {
   endpoint {
     url = "http://prometheus:9090/api/v1/write"
-
     queue_config {
       capacity             = 10000
       max_shards           = 10
@@ -15,9 +17,10 @@ prometheus.remote_write "default" {
   }
 }
 
+// ============================================================================
+// SYSTEM METRICS (Node Exporter)
+// ============================================================================
 prometheus.exporter.unix "system" {
-  disable_collectors = []
-
   enable_collectors = [
     "cpu",
     "cpufreq",
@@ -32,78 +35,69 @@ prometheus.exporter.unix "system" {
     "uname",
     "vmstat",
   ]
-
   filesystem {
     mount_points_exclude = "^/(dev|proc|sys|var/lib/docker/.+)($|/)"
     fs_types_exclude     = "^(autofs|binfmt_misc|bpf|cgroup2?|configfs|debugfs|devpts|devtmpfs|fusectl|hugetlbfs|iso9660|mqueue|nsfs|overlay|proc|procfs|pstore|rpc_pipefs|securityfs|selinuxfs|squashfs|sysfs|tracefs)$"
   }
 }
 
-prometheus.relabel "system_job" {
-  forward_to = [prometheus.remote_write.default.receiver]
-
-  rule {
-    target_label = "job"
-    replacement  = "alloy_system"
-  }
-}
-
-prometheus.scrape "system_metrics" {
+prometheus.scrape "system" {
   targets         = prometheus.exporter.unix.system.targets
-  forward_to      = [prometheus.relabel.system_job.receiver]
+  forward_to      = [prometheus.relabel.system.receiver]
   scrape_interval = "15s"
-  scrape_timeout  = "10s"
 }
 
-prometheus.exporter.cadvisor "containers" {
-  docker_host      = "unix:///var/run/docker.sock"
-  storage_duration = "2m"
-}
-
-prometheus.relabel "cadvisor_job" {
-  forward_to = [prometheus.remote_write.default.receiver]
-
+prometheus.relabel "system" {
+  forward_to = [prometheus.remote_write.prometheus.receiver]
   rule {
-    target_label = "job"
-    replacement  = "alloy_cadvisor"
+    action       = "replace"
+    source_labels = ["job"]
+    target_label  = "job"
+    replacement   = "alloy_system"
   }
+}
+
+// ============================================================================
+// CONTAINER METRICS (cAdvisor)
+// ============================================================================
+prometheus.exporter.cadvisor "containers" {
+  docker_host            = "unix:///var/run/docker.sock"
+  docker_only            = true
+  store_container_labels = true
 }
 
 prometheus.scrape "cadvisor" {
   targets         = prometheus.exporter.cadvisor.containers.targets
-  forward_to      = [prometheus.relabel.cadvisor_job.receiver]
+  forward_to      = [prometheus.relabel.cadvisor.receiver]
   scrape_interval = "10s"
-  scrape_timeout  = "10s"
 }
 
-prometheus.scrape "telegraf" {
-  job_name        = "telegraf"
-  targets = [{
-    __address__ = "telegraf:9273",
-  }]
-
-  forward_to      = [prometheus.remote_write.default.receiver]
-  scrape_interval = "10s"
-  scrape_timeout  = "5s"
-}
-
-prometheus.exporter.self "alloy" {}
-
-prometheus.relabel "alloy_self_job" {
-  forward_to = [prometheus.remote_write.default.receiver]
-
+prometheus.relabel "cadvisor" {
+  forward_to = [prometheus.remote_write.prometheus.receiver]
   rule {
-    target_label = "job"
-    replacement  = "alloy_self"
+    source_labels = ["__address__"]
+    target_label  = "job"
+    replacement   = "integrations/cadvisor"
   }
 }
 
-prometheus.scrape "alloy_metrics" {
-  targets         = prometheus.exporter.self.alloy.targets
-  forward_to      = [prometheus.relabel.alloy_self_job.receiver]
-  scrape_interval = "30s"
+// ============================================================================
+// NGINX STUB STATUS
+// ============================================================================
+prometheus.scrape "nginx" {
+  targets = [
+    {
+      "__address__"      = "nginx-exporter:9113",
+      "job"              = "nginx",
+      "instance"         = "nginx_service",
+    },
+  ]
+  forward_to = [prometheus.remote_write.prometheus.receiver]
 }
 
+// ============================================================================
+// DOCKER CONTAINER LOGS → LOKI
+// ============================================================================
 discovery.docker "containers" {
   host = "unix:///var/run/docker.sock"
 }
@@ -111,14 +105,36 @@ discovery.docker "containers" {
 discovery.relabel "docker_logs" {
   targets = discovery.docker.containers.targets
 
+  // Container name (bỏ dấu / ở đầu)
   rule {
     source_labels = ["__meta_docker_container_name"]
     target_label  = "container"
+    regex         = "/?(.+)"
+    replacement   = "$1"
+    action        = "replace"
+  }
+
+  // Container ID (short)
+  rule {
+    source_labels = ["__meta_docker_container_id"]
+    target_label  = "container_id"
+    regex         = "([0-9a-f]{12}).*"
+    replacement   = "$1"
+    action        = "replace"
+  }
+
+  // Image name
+  rule {
+    source_labels = ["__meta_docker_container_image"]
+    target_label  = "image"
     regex         = "(.+)"
     replacement   = "$1"
     action        = "replace"
   }
 
+  // ==========================================================================
+  // SERVICE / COMPOSE LABELS
+  // ==========================================================================
   rule {
     source_labels = ["__meta_docker_container_label_com_docker_swarm_service_name"]
     target_label  = "service"
@@ -126,7 +142,7 @@ discovery.relabel "docker_logs" {
     replacement   = "$1"
     action        = "replace"
   }
-
+  
   rule {
     source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
     target_label  = "service"
@@ -135,21 +151,33 @@ discovery.relabel "docker_logs" {
     action        = "replace"
   }
 
+  // Set job name from compose service first (Base rule)
   rule {
-    source_labels = ["__meta_docker_container_label_com_docker_swarm_service_name"]
-    target_label  = "compose_service"
+    source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
+    target_label  = "job"
     regex         = "(.+)"
     replacement   = "$1"
     action        = "replace"
   }
 
+  // FORCE SET job="nginx" and service="nginx" for nginx container (Override rule - Highest Priority)
   rule {
-    source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
-    target_label  = "compose_service"
-    regex         = "(.+)"
-    replacement   = "$1"
+    source_labels = ["__meta_docker_container_name"]
+    target_label  = "job"
+    regex         = "/?.*nginx.*"
+    replacement   = "nginx"
     action        = "replace"
   }
+  
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    target_label  = "service"
+    regex         = "/?.*nginx.*"
+    replacement   = "nginx"
+    action        = "replace"
+  }
+
+
 
   rule {
     source_labels = ["__meta_docker_container_label_com_docker_stack_namespace"]
@@ -166,36 +194,149 @@ discovery.relabel "docker_logs" {
     replacement   = "$1"
     action        = "replace"
   }
-}
 
-loki.source.file "nginx_access" {
-  targets = [{
-    __path__ = "/var/log/nginx/access.log",
-    job      = "nginx",
-    stream   = "stdout",
-  }]
-  forward_to = [loki.write.loki.receiver]
-}
+  // Create clean stack_name label (same as compose_project, for clarity)
+  rule {
+    source_labels = ["compose_project"]
+    target_label  = "stack_name"
+    regex         = "(.+)"
+    replacement   = "$1"
+    action        = "replace"
+  }
 
-loki.source.file "nginx_error" {
-  targets = [{
-    __path__ = "/var/log/nginx/error.log",
-    job      = "nginx",
-    stream   = "stderr",
-  }]
-  forward_to = [loki.write.loki.receiver]
+  // Strip stack prefix from service name using multiple passes
+  // This handles cases like:
+  // - "monitoring_prometheus" -> "prometheus" (1 pass)
+  // - "ai_school_local_backend" -> "backend" (2 passes: ai_school_local_ -> school_local_ -> backend)
+  // - "ai_school_local_db_test" -> "db_test" (2 passes: ai_school_local_ -> school_local_ -> db_test)
+  // We strip up to 3 prefix segments (enough for most cases)
+  
+  // Pass 1: Strip first segment (e.g., "ai_school_local_backend" -> "school_local_backend")
+  rule {
+    source_labels = ["service"]
+    target_label  = "service"
+    regex         = "^[^_]+_(.+)$"
+    replacement   = "$1"
+    action        = "replace"
+  }
+  
+  // Pass 2: Strip second segment if still has prefix pattern (e.g., "school_local_backend" -> "local_backend")
+  rule {
+    source_labels = ["service"]
+    target_label  = "service"
+    regex         = "^[^_]+_(.+)$"
+    replacement   = "$1"
+    action        = "replace"
+  }
+  
+  // Pass 3: Strip third segment if still has prefix pattern (e.g., "local_backend" -> "backend")
+  rule {
+    source_labels = ["service"]
+    target_label  = "service"
+    regex         = "^[^_]+_(.+)$"
+    replacement   = "$1"
+    action        = "replace"
+  }
+  
+  // Create clean service_name label (same as service after stripping, for clarity)
+  rule {
+    source_labels = ["service"]
+    target_label  = "service_name"
+    regex         = "(.+)"
+    replacement   = "$1"
+    action        = "replace"
+  }
+  
+  // Note: This approach assumes service names don't have more than 3 prefix segments
+  // For "ai_school_local_db_test", after 3 passes: "ai_school_local_db_test" -> "school_local_db_test" -> "local_db_test" -> "db_test" ✓
 }
 
 loki.source.docker "containers" {
-  host         = "unix:///var/run/docker.sock"
-  targets      = discovery.relabel.docker_logs.output
-  labels       = {source = "docker", env = "staging"}
-  relabel_rules = discovery.relabel.docker_logs.rules
-  forward_to   = [loki.write.loki.receiver]
+  host          = "unix:///var/run/docker.sock"
+  targets       = discovery.relabel.docker_logs.output
+  forward_to = [loki.process.docker_logs.receiver]
+}
+
+// Process để thêm log level detection và nginx log parsing
+loki.process "docker_logs" {
+  forward_to = [loki.write.loki.receiver]
+
+  // Parse NGINX access logs (only for nginx container)
+  stage.match {
+    selector = "{job=\"nginx\"}"
+    stage.regex {
+      // Regex khớp với format: '$remote_addr ... "$agent" $request_time' (req_time is optional)
+      expression = "^(?P<client>\\S+) (?P<ident>\\S+) (?P<auth>\\S+) \\[(?P<timestamp>[^\\]]+)\\] \"(?P<verb>\\S+) (?P<request>[^\"]+) (?P<httpversion>\\S+)\" (?P<status>\\d+) (?P<response>\\d+) \"(?P<referrer>[^\"]*)\" \"(?P<agent>[^\"]*)\"(\\s+(?P<req_time>[0-9\\.]+))?.*"
+    }
+    
+    // Extract request path (before query string)
+    stage.regex {
+      source     = "request"
+      expression = "^(?P<request_path>[^?]+)"
+    }
+
+    stage.labels {
+      values = {
+        verb      = "verb",
+        request   = "request_path",
+        resp_code = "status",
+      }
+    }
+
+    stage.static_labels {
+      values = {
+        job = "nginx",
+      }
+    }
+
+    stage.metrics {
+      metric.histogram {
+        name        = "nginxlog_request_duration_seconds"
+        description = "Distribution of NGINX request processing times, from logs."
+        source      = "req_time"
+        prefix      = ""
+        buckets     = [0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10]
+      }
+    }
+  }
+
+  // Detect log level (error, warn, info, debug) for all containers
+  stage.regex {
+    expression = "(?i)(?P<level>error|err|fatal|panic|warn|warning|info|debug)"
+  }
+  stage.labels {
+    values = {
+      level = "level",
+    }
+  }
 }
 
 loki.write "loki" {
   endpoint {
     url = "http://loki:3102/loki/api/v1/push"
   }
+}
+
+// ============================================================================
+// ALLOY SELF MONITORING
+// ============================================================================
+prometheus.exporter.self "alloy" {}
+
+prometheus.relabel "alloy_self_labels" {
+  forward_to = [prometheus.remote_write.prometheus.receiver]
+  rule {
+    action       = "replace"
+    target_label = "instance"
+    replacement  = "alloy:12345"
+  }
+  rule {
+    action       = "replace"
+    target_label = "job"
+    replacement  = "alloy"
+  }
+}
+
+prometheus.scrape "alloy" {
+  targets    = prometheus.exporter.self.alloy.targets
+  forward_to = [prometheus.relabel.alloy_self_labels.receiver]
 }

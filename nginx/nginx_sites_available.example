@@ -91,6 +91,31 @@
 #}
 
 server {
+	listen 80 default_server;
+	server_name  localhost;
+
+	location / {
+		root   html;
+		index  index.html index.htm;
+	}
+
+	location /nginx_status {
+		stub_status;
+		# Allow access only from the specified subnet
+		allow 10.0.1.0/24;
+		allow 10.0.2.0/24;
+		allow 10.0.3.0/24;
+		deny all;
+	}
+
+	# redirect server error pages to the static page /50x.html
+	error_page   500 502 503 504  /50x.html;
+	location = /50x.html {
+		root   html;
+	}
+}
+
+server {
     listen 80;
 	# access_log off; # if don't want get logs
     server_name your_domain.com;

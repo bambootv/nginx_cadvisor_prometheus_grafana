@@ -1,0 +1,12 @@
+groups:
+  - name: nginx_instant_metrics
+    interval: 15s
+    rules:
+      - record: loki_nginx_requests_rate_by_verb
+        expr: sum by (verb, resp_code, request) (rate({job="nginx"} | regexp "\"(?P<verb>\\S+) (?P<request>\\S+) \\S+\" (?P<resp_code>\\d{3}) (?P<resp_bytes>\\d+) \".*\" \".*\" (?P<request_time>[\\d\\.]+)" [5m]))
+      
+      - record: loki_nginx_requests_total_by_verb_1m
+        expr: sum by (verb, resp_code, request) (count_over_time({job="nginx"} | regexp "\"(?P<verb>\\S+) (?P<request>\\S+) \\S+\" (?P<resp_code>\\d{3}) (?P<resp_bytes>\\d+) \".*\" \".*\" (?P<request_time>[\\d\\.]+)" [1m]))
+
+      - record: loki_nginx_requests_total_by_verb_5m
+        expr: sum by (verb, resp_code, request) (count_over_time({job="nginx"} | regexp "\"(?P<verb>\\S+) (?P<request>\\S+) \\S+\" (?P<resp_code>\\d{3}) (?P<resp_bytes>\\d+) \".*\" \".*\" (?P<request_time>[\\d\\.]+)" [5m]))

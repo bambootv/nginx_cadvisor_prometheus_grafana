@@ -20,12 +20,13 @@ services:
   # NGINX - Web Server
   # ============================================================================
   nginx:
-    image: nginx:stub_status
+    image: nginx:1.28
     ports:
       - "80:80"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./nginx/nginx_sites_available:/etc/nginx/conf.d/default.conf:ro
+      - ./nginx/cloudflare_real_ip.conf:/etc/nginx/conf.d/cloudflare_real_ip.conf:ro
     networks:
       - monitoring_swarm
     deploy:
@@ -60,14 +61,31 @@ services:
     image: grafana/alloy:v1.11.1
     ports:
       - "12345:12345"  # Alloy UI
+    env_file:
+      - "./.env"
     volumes:
+      # --- Configuration & Data ---
       - ./alloy/config.alloy:/etc/alloy/config.alloy:ro
+      - ./alloy/geoip:/etc/alloy/geoip:ro
       - alloy_data:/var/lib/alloy
+
+      # --- Common Mounts (Works on macOS & Linux) ---
+      # Node Exporter needs these to monitor the Host (VM on macOS, Real Host on Linux)
       - /proc:/host/proc:ro
       - /sys:/host/sys:ro
       - /:/host/root:ro
+
+      # Docker Socket & Logs
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
+
+      # --- Linux Production ONLY (Uncomment on Linux) ---
+      # cAdvisor needs these extra mounts to map container names & stats correctly
+      # - /:/rootfs:ro                         # cAdvisor: Host root
+      # - /sys:/sys:ro                         # cAdvisor: Host sysfs
+      # - /var/lib/docker:/var/lib/docker:ro   # cAdvisor: Full docker info (Overlaps with containers above)
+      # - /dev/disk/:/dev/disk:ro              # cAdvisor: Disk I/O
+      # - /sys/fs/cgroup:/sys/fs/cgroup:ro     # cAdvisor: Cgroups (Critical for per-container stats)
     command:
       - run
       - /etc/alloy/config.alloy
@@ -75,68 +93,11 @@ services:
       - --storage.path=/var/lib/alloy/data
     networks:
       - monitoring_swarm
-    deploy: *deploy_config
-
-  loki:
-    image: grafana/loki:3.5
-    user: "0:0"
-    ports:
-      - 3102:3102
-    command: -config.file=/etc/loki/config.yaml
-    volumes:
-      - ./loki/config.yaml:/etc/loki/config.yaml:ro
-      - ./loki/rules_source:/loki/rules_source:ro  # Rules tĩnh từ source code (read-only)
-      - loki_rules_storage:/loki/rules_storage    # Rules động từ API (read-write)
-      - loki_data:/loki
-    networks:
-      - monitoring_swarm
-    deploy: *deploy_config
-  # ============================================================================
-  # PROMETHEUS - Time-series Database
-  # ============================================================================
-  prometheus:
-    image: prom/prometheus:v2.53.0
-    ports:
-      - "9090:9090"
-    command:
-      - "--config.file=/etc/prometheus/prometheus.yml"
-      - "--storage.tsdb.retention.time=7d"
-      - "--storage.tsdb.retention.size=2GB"
-      - '--storage.tsdb.path=/prometheus'
-      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
-      - '--web.console.templates=/usr/share/prometheus/consoles'
-      - '--web.enable-lifecycle'
-      - '--enable-feature=remote-write-receiver'  # Enable remote write từ Alloy
-    volumes:
-      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      - prometheus_data:/prometheus
-    networks:
-      - monitoring_swarm
-    deploy: *deploy_config
-
-  # ============================================================================
-  # GRAFANA - Visualization
-  # ============================================================================
-  grafana:
-    image: grafana/grafana:10.3.3
-    ports:
-      - "3456:3000"
-    volumes:
-      - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
-      - ./grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
-      - grafana_data:/var/lib/grafana
-    environment:
-      - GF_SECURITY_ADMIN_PASSWORD=admin
-      - GF_USERS_ALLOW_SIGN_UP=false
-    networks:
-      - monitoring_swarm
+    # cAdvisor needs privileges to access container metrics
+    privileged: true
     deploy: *deploy_config
 
 volumes:
-  grafana_data:
-  prometheus_data:
-  loki_data:
-  loki_rules_storage:  # Volume cho rules được tạo qua API
   alloy_data:
 
 networks:

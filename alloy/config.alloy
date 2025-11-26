@@ -6,13 +6,17 @@ logging {
 // ============================================================================
 // PROMETHEUS REMOTE WRITE
 // ============================================================================
-prometheus.remote_write "prometheus" {
+prometheus.remote_write "prometheus_cloud" {
   endpoint {
-    url = "http://prometheus:9090/api/v1/write"
+    url = env("GRAFANA_CLOUD_PROM_URL")
     queue_config {
       capacity             = 10000
       max_shards           = 10
       max_samples_per_send = 5000
+    }
+    basic_auth {
+      username = env("GRAFANA_CLOUD_PROM_USER")
+      password = env("GRAFANA_CLOUD_API_KEY")
     }
   }
 }
@@ -21,6 +25,10 @@ prometheus.remote_write "prometheus" {
 // SYSTEM METRICS (Node Exporter)
 // ============================================================================
 prometheus.exporter.unix "system" {
+  procfs_path = "/host/proc"
+  sysfs_path  = "/host/sys"
+  rootfs_path = "/host/root"
+
   enable_collectors = [
     "cpu",
     "cpufreq",
@@ -43,7 +51,7 @@ prometheus.exporter.unix "system" {
 
 prometheus.scrape "system" {
   targets         = prometheus.exporter.unix.system.targets
-  forward_to      = [prometheus.remote_write.prometheus.receiver]
+  forward_to      = [prometheus.remote_write.prometheus_cloud.receiver]
   scrape_interval = "15s"
 }
 
@@ -63,12 +71,46 @@ prometheus.scrape "cadvisor" {
 }
 
 prometheus.relabel "cadvisor" {
-  forward_to = [prometheus.remote_write.prometheus.receiver]
+  forward_to = [prometheus.remote_write.prometheus_cloud.receiver]
 
   rule {
     source_labels = ["__address__"]
     target_label  = "job"
     replacement   = "integrations/cadvisor"
+  }
+
+  // ==========================================================================
+  // CONTAINER LABELS
+  // ==========================================================================
+
+  // Clean up container name (remove leading /)
+  rule {
+    source_labels = ["name"]
+    target_label  = "container"
+    regex         = "/?(.+)"
+    replacement   = "$1"
+  }
+
+  // Extract Service Name (Swarm > Compose)
+  rule {
+    source_labels = ["container_label_com_docker_swarm_service_name"]
+    target_label  = "service"
+  }
+
+  rule {
+    source_labels = ["container_label_com_docker_compose_service"]
+    target_label  = "service"
+  }
+
+  // Extract Stack/Project Name
+  rule {
+    source_labels = ["container_label_com_docker_stack_namespace"]
+    target_label  = "stack"
+  }
+
+  rule {
+    source_labels = ["container_label_com_docker_compose_project"]
+    target_label  = "project"
   }
 }
 
@@ -85,7 +127,7 @@ prometheus.scrape "nginx" {
     },
   ]
 
-  forward_to = [prometheus.remote_write.prometheus.receiver]
+  forward_to = [prometheus.remote_write.prometheus_cloud.receiver]
 }
 
 // ============================================================================
@@ -218,14 +260,25 @@ loki.source.docker "containers" {
 
 // Process để thêm log level detection và nginx log parsing
 loki.process "docker_logs" {
-  forward_to = [loki.write.loki.receiver]
+  forward_to = [loki.write.loki_cloud.receiver]
 
   // Parse NGINX access logs (only for nginx container)
   stage.match {
     selector = "{compose_service=\"monitoring_nginx\"}"
 
     stage.regex {
-      expression = "^(?P<client>\\S+) (?P<ident>\\S+) (?P<auth>\\S+) \\[(?P<timestamp>[^\\]]+)\\] \"(?P<verb>\\S+) (?P<request>[^\"]+) (?P<httpversion>\\S+)\" (?P<status>\\d+) (?P<response>\\d+) \"(?P<referrer>[^\"]*)\" \"(?P<agent>[^\"]*)\" \"(?P<req_time>\\d+\\.\\d+)\"$"
+      expression = "^(?P<client>\\S+) (?P<ident>\\S+) (?P<auth>\\S+) \\[(?P<timestamp>[^\\]]+)\\] \"(?P<verb>\\S+) (?P<request>[^\"]+) (?P<httpversion>\\S+)\" (?P<status>\\d+) (?P<response>\\d+) \"(?P<referrer>[^\"]*)\" \"(?P<agent>[^\"]*)\" \"(?P<req_time>\\d+\\.\\d+)\"(?: \"(?P<country>[^\"]*)\")?$"
+    }
+
+    stage.geoip {
+      source = "client"
+      db     = "/etc/alloy/geoip/GeoLite2-City.mmdb"
+      db_type = "city"
+    }
+
+    stage.template {
+      source   = "final_country_code"
+      template = "{{ if .geoip_country_code }}{{ .geoip_country_code }}{{ else }}VN{{ end }}"
     }
 
     // Extract request path (before query string)
@@ -239,6 +292,7 @@ loki.process "docker_logs" {
         verb      = "verb",
         request   = "request_path",
         resp_code = "status",
+        country   = "final_country_code",
       }
     }
 
@@ -260,6 +314,13 @@ loki.process "docker_logs" {
   }
 
   // Detect log level (error, warn, info, debug) for all containers
+  // Set default level to unknown first
+  stage.static_labels {
+    values = {
+      level = "unknown",
+    }
+  }
+
   stage.regex {
     expression = "(?i)(?P<level>error|err|fatal|panic|warn|warning|info|debug)"
   }
@@ -272,9 +333,15 @@ loki.process "docker_logs" {
   }
 }
 
-loki.write "loki" {
+loki.write "loki_cloud" {
   endpoint {
-    url = "http://loki:3102/loki/api/v1/push"
+    url = env("GRAFANA_CLOUD_LOKI_URL")
+
+    // SỬ DỤNG CREDENTIALS CỦA LOKI
+    basic_auth {
+      username = env("GRAFANA_CLOUD_LOKI_USER")
+      password = env("GRAFANA_CLOUD_API_KEY")
+    }
   }
 }
 
@@ -284,7 +351,7 @@ loki.write "loki" {
 prometheus.exporter.self "alloy" {}
 
 prometheus.relabel "alloy_self_labels" {
-  forward_to = [prometheus.remote_write.prometheus.receiver]
+  forward_to = [prometheus.remote_write.prometheus_cloud.receiver]
 
   rule {
     action       = "replace"

@@ -60,7 +60,7 @@ services:
   alloy:
     image: grafana/alloy:v1.11.1
     ports:
-      - "12345:12345"  # Alloy UI
+      - "12345:12345" # Alloy UI
     env_file:
       - "./.env"
     volumes:
@@ -81,11 +81,11 @@ services:
 
       # --- Linux Production ONLY (Uncomment on Linux) ---
       # cAdvisor needs these extra mounts to map container names & stats correctly
-      # - /:/rootfs:ro                         # cAdvisor: Host root
-      # - /sys:/sys:ro                         # cAdvisor: Host sysfs
-      # - /var/lib/docker:/var/lib/docker:ro   # cAdvisor: Full docker info (Overlaps with containers above)
-      # - /dev/disk/:/dev/disk:ro              # cAdvisor: Disk I/O
-      # - /sys/fs/cgroup:/sys/fs/cgroup:ro     # cAdvisor: Cgroups (Critical for per-container stats)
+      - /:/rootfs:ro # cAdvisor: Host root
+      - /sys:/sys:ro # cAdvisor: Host sysfs
+      - /var/lib/docker:/var/lib/docker:ro # cAdvisor: Full docker info (Overlaps with containers above)
+      - /dev/disk/:/dev/disk:ro # cAdvisor: Disk I/O
+      - /sys/fs/cgroup:/sys/fs/cgroup:ro # cAdvisor: Cgroups (Critical for per-container stats)
     command:
       - run
       - /etc/alloy/config.alloy

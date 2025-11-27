@@ -33,6 +33,7 @@ cp nginx/nginx_sites_available.example nginx/nginx_sites_available
 ```
 
 **Lưu ý:** Cập nhật file `.env` với thông tin xác thực của Grafana Cloud:
+
 - `GRAFANA_CLOUD_LOKI_USER`
 - `GRAFANA_CLOUD_API_KEY`
 - `GRAFANA_CLOUD_LOKI_RULES_URL`
@@ -43,20 +44,22 @@ cp nginx/nginx_sites_available.example nginx/nginx_sites_available
 Sử dụng `Makefile` để quản lý các lệnh Docker Swarm.
 
 **Khởi tạo Docker Swarm (chạy lần đầu):**
+
 ```bash
 make swarm
 ```
 
 **Deploy Stack (Nginx + Alloy):**
+
 ```bash
 make stack
 ```
 
 **Cập nhật Nginx Service (khi sửa config):**
+
 ```bash
 make deploy
 ```
-
 
 ## 📊 Quản lý Rules & Dashboards
 
@@ -79,21 +82,25 @@ docker run --rm \
 Sử dụng Terraform để tự động tạo và cập nhật Dashboards trên Grafana Cloud.
 
 **Khởi tạo Terraform:**
+
 ```bash
 docker run --rm --env-file .env -v "$PWD":/workspace -w /workspace/terraform hashicorp/terraform:light init
 ```
 
 **Apply Dashboards:**
+
 ```bash
 docker run --rm --env-file .env -v "$PWD":/workspace -w /workspace/terraform hashicorp/terraform:light apply -auto-approve
 ```
 
 **Format code Terraform:**
+
 ```bash
 docker run --rm -v "$PWD":/workspace -w /workspace/terraform hashicorp/terraform:light fmt
 ```
 
 **Xóa Dashboards (Destroy):**
+
 ```bash
 docker run --rm --env-file .env -v "$PWD":/workspace -w /workspace/terraform hashicorp/terraform:light destroy -auto-approve
 ```
@@ -111,4 +118,3 @@ docker run --rm --env-file .env -v "$PWD":/workspace -w /workspace/terraform has
 
 - **Grafana Alloy UI**: Truy cập `http://localhost:12345` để xem trạng thái của Alloy agent.
 - **Nginx**: Truy cập `http://localhost:80`.
-

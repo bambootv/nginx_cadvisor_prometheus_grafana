@@ -1,0 +1,9 @@
+groups:
+  - name: nginx_log_metrics
+    interval: 15s
+    rules:
+      - record: nginx_custom_rate_requests_5m
+        expr: sum by (verb, request, resp_code) (rate({job="nginx"}[5m]))
+
+      - record: nginx_custom_count_requests_5m
+        expr: sum by (verb, request, resp_code) (count_over_time({job="nginx"}[5m]))

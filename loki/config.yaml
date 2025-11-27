@@ -1,0 +1,85 @@
+# ============================================================================
+# ✅ THÊM DÒNG NÀY ĐỂ CHẠY LOKI Ở CHẾ ĐỘ "SINGLE BINARY" ĐÚNG CÁCH
+# Nó sẽ cấu hình tất cả các thành phần (ingester, querier, etc.)
+# để tự động làm việc với nhau trong cùng một tiến trình.
+# ============================================================================
+target: all
+
+auth_enabled: false
+
+server:
+  http_listen_port: 3100
+
+frontend_worker:
+  frontend_address: 127.0.0.1:9095
+
+common:
+  path_prefix: /loki
+  storage:
+    filesystem:
+      chunks_directory: /loki/chunks
+      rules_directory: /loki/rules_storage # Lưu rules động
+  replication_factor: 1
+  ring:
+    instance_addr: 127.0.0.1
+    kvstore:
+      store: inmemory
+
+# Cấu hình Ingester để tránh lỗi timeout
+ingester:
+  lifecycler:
+    address: 127.0.0.1
+    ring:
+      kvstore:
+        store: inmemory
+      replication_factor: 1
+    final_sleep: 0s
+  chunk_idle_period: 5m
+  chunk_retain_period: 30s
+  wal:
+    enabled: true
+    dir: /loki/wal
+
+# Cấu hình Querier
+querier:
+  max_concurrent: 20
+
+# ĐÃ NÂNG CẤP SCHEMA
+schema_config:
+  configs:
+    # Khối cũ để đọc dữ liệu cũ
+    - from: 2020-10-24
+      store: boltdb-shipper
+      object_store: filesystem
+      schema: v12
+      index:
+        prefix: index_
+        period: 24h
+    # Khối mới cho dữ liệu mới, hiệu năng tốt hơn
+    - from: 2025-11-11
+      store: tsdb
+      object_store: filesystem
+      schema: v13
+      index:
+        prefix: index_
+        period: 24h
+
+ruler:
+
+  storage:
+    type: local
+    local:
+      directory: /loki/rules_source # Đọc rules tĩnh từ source code
+  ring:
+    instance_addr: 127.0.0.1
+    kvstore:
+      store: inmemory
+  enable_api: true
+  wal:
+    dir: /loki/ruler-wal
+  remote_write:
+    enabled: true
+    client:
+      url: http://prometheus:9090/api/v1/write
+      send_exemplars: true
+  alertmanager_url: ""

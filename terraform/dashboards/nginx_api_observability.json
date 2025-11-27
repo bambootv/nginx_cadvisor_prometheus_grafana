@@ -971,7 +971,7 @@
                 },
                 "basemap": {
                     "config": {},
-                    "name": "CartoDB Dark",
+                    "name": "CartoDB Positron",
                     "type": "carto"
                 },
                 "layers": [
@@ -1100,6 +1100,200 @@
                         }
                     }
                 ]
+            }
+        },
+        {
+            "id": 403,
+            "type": "table",
+            "title": "Top Countries Statistics (Detailed View)",
+            "gridPos": {
+                "h": 10,
+                "w": 24,
+                "x": 0,
+                "y": 72
+            },
+            "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+            },
+            "targets": [
+                {
+                    "refId": "A",
+                    "expr": "sum by (country) (sum_over_time(loki_nginx_requests_total_by_country[$__range]))",
+                    "format": "table",
+                    "instant": true,
+                    "legendFormat": "Total Requests"
+                },
+                {
+                    "refId": "B",
+                    "expr": "sum by (country) (sum_over_time(loki_nginx_requests_total_by_country{resp_code=~\"4..|5..\"}[$__range]))",
+                    "format": "table",
+                    "instant": true,
+                    "legendFormat": "All Errors (4xx+5xx)"
+                },
+                {
+                    "refId": "C",
+                    "expr": "sum by (country) (sum_over_time(loki_nginx_requests_total_by_country{resp_code=~\"5..\"}[$__range]))",
+                    "format": "table",
+                    "instant": true,
+                    "legendFormat": "Critical (5xx)"
+                }
+            ],
+            "transformations": [
+                {
+                    "id": "joinByField",
+                    "options": {
+                        "byField": "country",
+                        "mode": "outer"
+                    }
+                },
+                {
+                    "id": "organize",
+                    "options": {
+                        "excludeByName": {
+                            "Time": true
+                        },
+                        "indexByName": {
+                            "country": 0,
+                            "Total Requests": 1,
+                            "All Errors (4xx+5xx)": 2,
+                            "Critical (5xx)": 3
+                        },
+                        "renameByName": {
+                            "Value #A": "Total Requests",
+                            "Value #B": "All Errors (4xx+5xx)",
+                            "Value #C": "Critical (5xx)"
+                        }
+                    }
+                },
+                {
+                    "id": "sortBy",
+                    "options": {
+                        "fields": {},
+                        "sort": [
+                            {
+                                "field": "Total Requests",
+                                "desc": true
+                            }
+                        ]
+                    }
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "custom": {
+                        "align": "auto",
+                        "displayMode": "auto",
+                        "inspect": false
+                    },
+                    "mappings": [],
+                    "color": {
+                        "mode": "thresholds"
+                    },
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "transparent",
+                                "value": null
+                            }
+                        ]
+                    }
+                },
+                "overrides": [
+                    {
+                        "matcher": {
+                            "id": "byName",
+                            "options": "Total Requests"
+                        },
+                        "properties": [
+                            {
+                                "id": "custom.displayMode",
+                                "value": "gradient-gauge"
+                            },
+                            {
+                                "id": "color",
+                                "value": {
+                                    "mode": "continuous-GrYlRd"
+                                }
+                            },
+                            {
+                                "id": "unit",
+                                "value": "short"
+                            }
+                        ]
+                    },
+                    {
+                        "matcher": {
+                            "id": "byName",
+                            "options": "All Errors (4xx+5xx)"
+                        },
+                        "properties": [
+                            {
+                                "id": "custom.displayMode",
+                                "value": "lcd-gauge"
+                            },
+                            {
+                                "id": "color",
+                                "value": {
+                                    "mode": "fixed",
+                                    "fixedColor": "orange"
+                                }
+                            },
+                            {
+                                "id": "unit",
+                                "value": "short"
+                            }
+                        ]
+                    },
+                    {
+                        "matcher": {
+                            "id": "byName",
+                            "options": "Critical (5xx)"
+                        },
+                        "properties": [
+                            {
+                                "id": "custom.displayMode",
+                                "value": "lcd-gauge"
+                            },
+                            {
+                                "id": "color",
+                                "value": {
+                                    "mode": "thresholds"
+                                }
+                            },
+                            {
+                                "id": "thresholds",
+                                "value": {
+                                    "mode": "absolute",
+                                    "steps": [
+                                        {
+                                            "color": "green",
+                                            "value": null
+                                        },
+                                        {
+                                            "color": "#ff0000",
+                                            "value": 1
+                                        }
+                                    ]
+                                }
+                            },
+                            {
+                                "id": "unit",
+                                "value": "short"
+                            }
+                        ]
+                    }
+                ]
+            },
+            "options": {
+                "showHeader": true,
+                "footer": {
+                    "show": true,
+                    "enablePagination": true,
+                    "countRows": false,
+                    "fields": ""
+                }
             }
         }
     ],

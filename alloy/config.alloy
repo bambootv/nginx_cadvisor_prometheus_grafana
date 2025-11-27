@@ -267,7 +267,7 @@ loki.process "docker_logs" {
     selector = "{compose_service=\"monitoring_nginx\"}"
 
     stage.regex {
-      expression = "^(?P<client>\\S+) (?P<ident>\\S+) (?P<auth>\\S+) \\[(?P<timestamp>[^\\]]+)\\] \"(?P<verb>\\S+) (?P<request>[^\"]+) (?P<httpversion>\\S+)\" (?P<status>\\d+) (?P<response>\\d+) \"(?P<referrer>[^\"]*)\" \"(?P<agent>[^\"]*)\" \"(?P<req_time>\\d+\\.\\d+)\"(?: \"(?P<country>[^\"]*)\")?$"
+      expression = "^(?P<client>\\S+) (?P<ident>\\S+) (?P<auth>\\S+) \\[(?P<timestamp>[^\\]]+)\\] \"(?P<verb>\\S+) (?P<request>[^\"]+) (?P<httpversion>\\S+)\" (?P<status>\\d+) (?P<response>\\d+) \"(?P<referrer>[^\"]*)\" \"(?P<agent>[^\"]*)\" \"(?P<req_time>\\d+\\.\\d+)\"$"
     }
 
     stage.geoip {

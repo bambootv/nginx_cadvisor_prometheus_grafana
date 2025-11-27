@@ -271,9 +271,9 @@
                         "fillOpacity": 10,
                         "gradientMode": "none",
                         "hideFrom": {
+                            "legend": false,
                             "tooltip": false,
-                            "viz": false,
-                            "legend": false
+                            "viz": false
                         },
                         "lineInterpolation": "linear",
                         "lineWidth": 2,
@@ -284,8 +284,8 @@
                         "showPoints": "never",
                         "spanNulls": false,
                         "stacking": {
-                            "group": "A",
-                            "mode": "none"
+                            "mode": "none",
+                            "group": "A"
                         },
                         "thresholdsStyle": {
                             "mode": "off"
@@ -385,9 +385,9 @@
                         "fillOpacity": 20,
                         "gradientMode": "opacity",
                         "hideFrom": {
+                            "legend": false,
                             "tooltip": false,
-                            "viz": false,
-                            "legend": false
+                            "viz": false
                         },
                         "lineInterpolation": "smooth",
                         "lineWidth": 2,
@@ -398,8 +398,8 @@
                         "showPoints": "never",
                         "spanNulls": false,
                         "stacking": {
-                            "group": "A",
-                            "mode": "none"
+                            "mode": "none",
+                            "group": "A"
                         },
                         "thresholdsStyle": {
                             "mode": "off"
@@ -517,9 +517,9 @@
                         "fillOpacity": 20,
                         "gradientMode": "opacity",
                         "hideFrom": {
+                            "legend": false,
                             "tooltip": false,
-                            "viz": false,
-                            "legend": false
+                            "viz": false
                         },
                         "lineInterpolation": "smooth",
                         "lineWidth": 2,
@@ -530,8 +530,8 @@
                         "showPoints": "never",
                         "spanNulls": false,
                         "stacking": {
-                            "group": "A",
-                            "mode": "normal"
+                            "mode": "normal",
+                            "group": "A"
                         },
                         "thresholdsStyle": {
                             "mode": "off"
@@ -643,9 +643,9 @@
                         "fillOpacity": 10,
                         "gradientMode": "none",
                         "hideFrom": {
+                            "legend": false,
                             "tooltip": false,
-                            "viz": false,
-                            "legend": false
+                            "viz": false
                         },
                         "lineInterpolation": "smooth",
                         "lineWidth": 2,
@@ -656,8 +656,8 @@
                         "showPoints": "never",
                         "spanNulls": false,
                         "stacking": {
-                            "group": "A",
-                            "mode": "none"
+                            "mode": "none",
+                            "group": "A"
                         },
                         "thresholdsStyle": {
                             "mode": "off"
@@ -762,9 +762,9 @@
                         "fillOpacity": 10,
                         "gradientMode": "none",
                         "hideFrom": {
+                            "legend": false,
                             "tooltip": false,
-                            "viz": false,
-                            "legend": false
+                            "viz": false
                         },
                         "lineInterpolation": "smooth",
                         "lineWidth": 2,
@@ -775,8 +775,8 @@
                         "showPoints": "never",
                         "spanNulls": false,
                         "stacking": {
-                            "group": "A",
-                            "mode": "none"
+                            "mode": "none",
+                            "group": "A"
                         },
                         "thresholdsStyle": {
                             "mode": "off"
@@ -860,6 +860,539 @@
             ],
             "title": "Disk I/O Operations",
             "type": "timeseries"
+        },
+        {
+            "collapsed": false,
+            "gridPos": {
+                "h": 1,
+                "w": 24,
+                "x": 0,
+                "y": 26
+            },
+            "id": 20,
+            "panels": [],
+            "title": "Container Resource Usage",
+            "type": "row"
+        },
+        {
+            "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+            },
+            "fieldConfig": {
+                "defaults": {
+                    "color": {
+                        "mode": "palette-classic"
+                    },
+                    "custom": {
+                        "axisCenteredZero": false,
+                        "axisColorMode": "text",
+                        "axisLabel": "",
+                        "axisPlacement": "auto",
+                        "barAlignment": 0,
+                        "drawStyle": "line",
+                        "fillOpacity": 10,
+                        "gradientMode": "none",
+                        "hideFrom": {
+                            "legend": false,
+                            "tooltip": false,
+                            "viz": false
+                        },
+                        "lineInterpolation": "linear",
+                        "lineWidth": 1,
+                        "pointSize": 5,
+                        "scaleDistribution": {
+                            "type": "linear"
+                        },
+                        "showPoints": "auto",
+                        "spanNulls": false,
+                        "stacking": {
+                            "group": "A",
+                            "mode": "none"
+                        },
+                        "thresholdsStyle": {
+                            "mode": "off"
+                        }
+                    },
+                    "mappings": [],
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            }
+                        ]
+                    },
+                    "unit": "none"
+                },
+                "overrides": []
+            },
+            "gridPos": {
+                "h": 9,
+                "w": 12,
+                "x": 0,
+                "y": 27
+            },
+            "id": 21,
+            "options": {
+                "legend": {
+                    "calcs": [
+                        "mean",
+                        "max"
+                    ],
+                    "displayMode": "table",
+                    "placement": "bottom",
+                    "showLegend": true
+                },
+                "tooltip": {
+                    "mode": "multi",
+                    "sort": "desc"
+                }
+            },
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "prometheus"
+                    },
+                    "editorMode": "code",
+                    "expr": "sum(rate(container_cpu_usage_seconds_total{stack=~\"$stack\", service=~\"$service\", container=~\"$container\", image!=\"\"}[$__rate_interval])) by (container)",
+                    "legendFormat": "{{container}}",
+                    "range": true,
+                    "refId": "A"
+                }
+            ],
+            "title": "CPU Usage per Container (vCPU)",
+            "type": "timeseries"
+        },
+        {
+            "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+            },
+            "fieldConfig": {
+                "defaults": {
+                    "color": {
+                        "mode": "palette-classic"
+                    },
+                    "custom": {
+                        "axisCenteredZero": false,
+                        "axisColorMode": "text",
+                        "axisLabel": "",
+                        "axisPlacement": "auto",
+                        "barAlignment": 0,
+                        "drawStyle": "line",
+                        "fillOpacity": 10,
+                        "gradientMode": "none",
+                        "hideFrom": {
+                            "legend": false,
+                            "tooltip": false,
+                            "viz": false
+                        },
+                        "lineInterpolation": "linear",
+                        "lineWidth": 1,
+                        "pointSize": 5,
+                        "scaleDistribution": {
+                            "type": "linear"
+                        },
+                        "showPoints": "auto",
+                        "spanNulls": false,
+                        "stacking": {
+                            "group": "A",
+                            "mode": "none"
+                        },
+                        "thresholdsStyle": {
+                            "mode": "off"
+                        }
+                    },
+                    "mappings": [],
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            }
+                        ]
+                    },
+                    "unit": "bytes"
+                },
+                "overrides": []
+            },
+            "gridPos": {
+                "h": 9,
+                "w": 12,
+                "x": 12,
+                "y": 27
+            },
+            "id": 22,
+            "options": {
+                "legend": {
+                    "calcs": [
+                        "last",
+                        "max"
+                    ],
+                    "displayMode": "table",
+                    "placement": "bottom",
+                    "showLegend": true
+                },
+                "tooltip": {
+                    "mode": "multi",
+                    "sort": "desc"
+                }
+            },
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "prometheus"
+                    },
+                    "editorMode": "code",
+                    "expr": "sum(container_memory_usage_bytes{stack=~\"$stack\", service=~\"$service\", container=~\"$container\", image!=\"\"}) by (container)",
+                    "legendFormat": "{{container}}",
+                    "range": true,
+                    "refId": "A"
+                }
+            ],
+            "title": "Memory Usage per Container",
+            "type": "timeseries"
+        },
+        {
+            "collapsed": false,
+            "gridPos": {
+                "h": 1,
+                "w": 24,
+                "x": 0,
+                "y": 36
+            },
+            "id": 23,
+            "panels": [],
+            "title": "Container Network & Disk I/O",
+            "type": "row"
+        },
+        {
+            "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+            },
+            "fieldConfig": {
+                "defaults": {
+                    "color": {
+                        "mode": "palette-classic"
+                    },
+                    "custom": {
+                        "axisCenteredZero": false,
+                        "axisColorMode": "text",
+                        "axisLabel": "",
+                        "axisPlacement": "auto",
+                        "barAlignment": 0,
+                        "drawStyle": "line",
+                        "fillOpacity": 10,
+                        "gradientMode": "none",
+                        "hideFrom": {
+                            "legend": false,
+                            "tooltip": false,
+                            "viz": false
+                        },
+                        "lineInterpolation": "linear",
+                        "lineWidth": 1,
+                        "pointSize": 5,
+                        "scaleDistribution": {
+                            "type": "linear"
+                        },
+                        "showPoints": "auto",
+                        "spanNulls": false,
+                        "stacking": {
+                            "group": "A",
+                            "mode": "none"
+                        },
+                        "thresholdsStyle": {
+                            "mode": "off"
+                        }
+                    },
+                    "mappings": [],
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            }
+                        ]
+                    },
+                    "unit": "binBps"
+                },
+                "overrides": []
+            },
+            "gridPos": {
+                "h": 9,
+                "w": 12,
+                "x": 0,
+                "y": 37
+            },
+            "id": 24,
+            "options": {
+                "legend": {
+                    "calcs": [
+                        "mean",
+                        "max"
+                    ],
+                    "displayMode": "table",
+                    "placement": "bottom",
+                    "showLegend": true
+                },
+                "tooltip": {
+                    "mode": "multi",
+                    "sort": "desc"
+                }
+            },
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "prometheus"
+                    },
+                    "editorMode": "code",
+                    "expr": "sum(rate(container_network_receive_bytes_total{stack=~\"$stack\", service=~\"$service\", container=~\"$container\", image!=\"\"}[$__rate_interval])) by (container)",
+                    "legendFormat": "RX: {{container}}",
+                    "range": true,
+                    "refId": "A"
+                },
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "prometheus"
+                    },
+                    "editorMode": "code",
+                    "expr": "-sum(rate(container_network_transmit_bytes_total{stack=~\"$stack\", service=~\"$service\", container=~\"$container\", image!=\"\"}[$__rate_interval])) by (container)",
+                    "legendFormat": "TX: {{container}}",
+                    "range": true,
+                    "refId": "B"
+                }
+            ],
+            "title": "Network Traffic (Inbound/Outbound)",
+            "type": "timeseries"
+        },
+        {
+            "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+            },
+            "fieldConfig": {
+                "defaults": {
+                    "color": {
+                        "mode": "palette-classic"
+                    },
+                    "custom": {
+                        "axisCenteredZero": false,
+                        "axisColorMode": "text",
+                        "axisLabel": "",
+                        "axisPlacement": "auto",
+                        "barAlignment": 0,
+                        "drawStyle": "line",
+                        "fillOpacity": 10,
+                        "gradientMode": "none",
+                        "hideFrom": {
+                            "legend": false,
+                            "tooltip": false,
+                            "viz": false
+                        },
+                        "lineInterpolation": "linear",
+                        "lineWidth": 1,
+                        "pointSize": 5,
+                        "scaleDistribution": {
+                            "type": "linear"
+                        },
+                        "showPoints": "auto",
+                        "spanNulls": false,
+                        "stacking": {
+                            "group": "A",
+                            "mode": "none"
+                        },
+                        "thresholdsStyle": {
+                            "mode": "off"
+                        }
+                    },
+                    "mappings": [],
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            }
+                        ]
+                    },
+                    "unit": "binBps"
+                },
+                "overrides": []
+            },
+            "gridPos": {
+                "h": 9,
+                "w": 12,
+                "x": 12,
+                "y": 37
+            },
+            "id": 25,
+            "options": {
+                "legend": {
+                    "calcs": [
+                        "mean",
+                        "max"
+                    ],
+                    "displayMode": "table",
+                    "placement": "bottom",
+                    "showLegend": true
+                },
+                "tooltip": {
+                    "mode": "multi",
+                    "sort": "desc"
+                }
+            },
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "prometheus"
+                    },
+                    "editorMode": "code",
+                    "expr": "sum(rate(container_fs_reads_bytes_total{stack=~\"$stack\", service=~\"$service\", container=~\"$container\", image!=\"\"}[$__rate_interval])) by (container)",
+                    "legendFormat": "Read: {{container}}",
+                    "range": true,
+                    "refId": "A"
+                },
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "prometheus"
+                    },
+                    "editorMode": "code",
+                    "expr": "sum(rate(container_fs_writes_bytes_total{stack=~\"$stack\", service=~\"$service\", container=~\"$container\", image!=\"\"}[$__rate_interval])) by (container)",
+                    "legendFormat": "Write: {{container}}",
+                    "range": true,
+                    "refId": "B"
+                }
+            ],
+            "title": "Disk I/O Throughput",
+            "type": "timeseries"
+        },
+        {
+            "collapsed": false,
+            "gridPos": {
+                "h": 1,
+                "w": 24,
+                "x": 0,
+                "y": 46
+            },
+            "id": 26,
+            "panels": [],
+            "title": "Container Status",
+            "type": "row"
+        },
+        {
+            "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+            },
+            "fieldConfig": {
+                "defaults": {
+                    "color": {
+                        "mode": "thresholds"
+                    },
+                    "custom": {
+                        "align": "auto",
+                        "displayMode": "auto",
+                        "inspect": false
+                    },
+                    "mappings": [],
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            }
+                        ]
+                    }
+                },
+                "overrides": [
+                    {
+                        "matcher": {
+                            "id": "byName",
+                            "options": "Value"
+                        },
+                        "properties": [
+                            {
+                                "id": "unit",
+                                "value": "dtdurations"
+                            },
+                            {
+                                "id": "displayName",
+                                "value": "Uptime"
+                            }
+                        ]
+                    }
+                ]
+            },
+            "gridPos": {
+                "h": 8,
+                "w": 24,
+                "x": 0,
+                "y": 47
+            },
+            "id": 27,
+            "options": {
+                "footer": {
+                    "enablePagination": true,
+                    "fields": "",
+                    "reducer": [
+                        "sum"
+                    ],
+                    "show": false
+                },
+                "showHeader": true,
+                "sortBy": [
+                    {
+                        "desc": true,
+                        "displayName": "Uptime"
+                    }
+                ]
+            },
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "prometheus"
+                    },
+                    "editorMode": "code",
+                    "expr": "max(time() - container_start_time_seconds{stack=~\"$stack\", service=~\"$service\", container=~\"$container\", image!=\"\"}) by (container, image, stack, service)",
+                    "format": "table",
+                    "instant": true,
+                    "range": false,
+                    "refId": "A"
+                }
+            ],
+            "title": "Running Containers Info",
+            "transformations": [
+                {
+                    "id": "organize",
+                    "options": {
+                        "excludeByName": {
+                            "Time": true
+                        },
+                        "indexByName": {
+                            "container": 0,
+                            "image": 1,
+                            "stack": 2,
+                            "service": 3,
+                            "Value": 4
+                        },
+                        "renameByName": {}
+                    }
+                }
+            ],
+            "type": "table"
         }
     ],
     "refresh": "10s",
@@ -872,7 +1405,92 @@
         "infrastructure"
     ],
     "templating": {
-        "list": []
+        "list": [
+            {
+                "allValue": ".*",
+                "current": {
+                    "selected": false,
+                    "text": "All",
+                    "value": "$__all"
+                },
+                "datasource": {
+                    "type": "prometheus",
+                    "uid": "prometheus"
+                },
+                "definition": "label_values(container_cpu_usage_seconds_total, stack)",
+                "hide": 0,
+                "includeAll": true,
+                "label": "Stack",
+                "multi": true,
+                "name": "stack",
+                "options": [],
+                "query": {
+                    "query": "label_values(container_cpu_usage_seconds_total, stack)",
+                    "refId": "StandardVariableQuery"
+                },
+                "refresh": 1,
+                "regex": "",
+                "skipUrlSync": false,
+                "sort": 1,
+                "type": "query"
+            },
+            {
+                "allValue": ".*",
+                "current": {
+                    "selected": false,
+                    "text": "All",
+                    "value": "$__all"
+                },
+                "datasource": {
+                    "type": "prometheus",
+                    "uid": "prometheus"
+                },
+                "definition": "label_values(container_cpu_usage_seconds_total{stack=~\"$stack\"}, service)",
+                "hide": 0,
+                "includeAll": true,
+                "label": "Service",
+                "multi": true,
+                "name": "service",
+                "options": [],
+                "query": {
+                    "query": "label_values(container_cpu_usage_seconds_total{stack=~\"$stack\"}, service)",
+                    "refId": "StandardVariableQuery"
+                },
+                "refresh": 1,
+                "regex": "",
+                "skipUrlSync": false,
+                "sort": 1,
+                "type": "query"
+            },
+            {
+                "allValue": ".*",
+                "current": {
+                    "selected": false,
+                    "text": "All",
+                    "value": "$__all"
+                },
+                "datasource": {
+                    "type": "prometheus",
+                    "uid": "prometheus"
+                },
+                "definition": "label_values(container_cpu_usage_seconds_total{stack=~\"$stack\", service=~\"$service\"}, container)",
+                "hide": 0,
+                "includeAll": true,
+                "label": "Container",
+                "multi": true,
+                "name": "container",
+                "options": [],
+                "query": {
+                    "query": "label_values(container_cpu_usage_seconds_total{stack=~\"$stack\", service=~\"$service\"}, container)",
+                    "refId": "StandardVariableQuery"
+                },
+                "refresh": 1,
+                "regex": "",
+                "skipUrlSync": false,
+                "sort": 1,
+                "type": "query"
+            }
+        ]
     },
     "time": {
         "from": "now-15m",

@@ -2,6 +2,21 @@
 
 Dự án này cung cấp một giải pháp giám sát toàn diện cho Nginx và hệ thống, sử dụng **Grafana Alloy** để thu thập metrics và logs, sau đó đẩy dữ liệu về **Grafana Cloud** (Loki cho logs, Prometheus cho metrics).
 
+## 📖 Mục lục
+
+- [Nginx Monitoring Stack with Grafana Alloy \& Loki](#nginx-monitoring-stack-with-grafana-alloy--loki)
+  - [📖 Mục lục](#-mục-lục)
+  - [📋 Tính năng](#-tính-năng)
+  - [🛠 Yêu cầu](#-yêu-cầu)
+  - [🚀 Cài đặt \& Cấu hình](#-cài-đặt--cấu-hình)
+    - [1. Khởi tạo môi trường](#1-khởi-tạo-môi-trường)
+    - [2. Triển khai (Deployment)](#2-triển-khai-deployment)
+  - [📊 Quản lý Rules \& Dashboards](#-quản-lý-rules--dashboards)
+    - [1. Nạp Loki Rules (Alerting/Recording Rules)](#1-nạp-loki-rules-alertingrecording-rules)
+    - [2. Upload Dashboards (Terraform)](#2-upload-dashboards-terraform)
+  - [📂 Cấu trúc thư mục](#-cấu-trúc-thư-mục)
+  - [🔍 Debugging](#-debugging)
+
 ## 📋 Tính năng
 
 - **Nginx**: Web server với cấu hình mẫu.

@@ -12,4 +12,8 @@ rules:
     expr: sum by (verb, resp_code, request) (count_over_time({job="nginx"}[15s]))
 
   - record: loki_nginx_requests_total_by_country
+<<<<<<< HEAD
     expr: sum by (country_name, resp_code) (count_over_time({job="nginx"}[15s]))
+=======
+    expr: sum by (country_name, resp_code) (count_over_time({job="nginx"}[15s]))
+>>>>>>> 6b1bdd6 (Apply host and cloud setup in one)

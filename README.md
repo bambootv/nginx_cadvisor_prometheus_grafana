@@ -1,135 +1,121 @@
 # Nginx Monitoring Stack with Grafana Alloy & Loki
 
-Dự án này cung cấp một giải pháp giám sát toàn diện cho Nginx và hệ thống, sử dụng **Grafana Alloy** để thu thập metrics và logs, sau đó đẩy dữ liệu về **Grafana Cloud** (Loki cho logs, Prometheus cho metrics).
+Giải pháp giám sát toàn diện cho Nginx trên Docker Swarm với hai chế độ triển khai:
+
+1. **Self-hosted:** Alloy ghi metrics/logs về Prometheus, Loki và Grafana tự vận hành.
+2. **Grafana Cloud:** Alloy đẩy dữ liệu thẳng lên Prometheus + Loki Cloud, sử dụng Grafana Cloud UI.
 
 ## 📖 Mục lục
 
-- [Nginx Monitoring Stack with Grafana Alloy \& Loki](#nginx-monitoring-stack-with-grafana-alloy--loki)
-  - [📖 Mục lục](#-mục-lục)
-  - [📋 Tính năng](#-tính-năng)
-  - [🛠 Yêu cầu](#-yêu-cầu)
-  - [🚀 Cài đặt \& Cấu hình](#-cài-đặt--cấu-hình)
-    - [1. Khởi tạo môi trường](#1-khởi-tạo-môi-trường)
-    - [2. Triển khai (Deployment)](#2-triển-khai-deployment)
-  - [📊 Quản lý Rules \& Dashboards](#-quản-lý-rules--dashboards)
-    - [1. Nạp Loki Rules (Alerting/Recording Rules)](#1-nạp-loki-rules-alertingrecording-rules)
-    - [2. Upload Dashboards (Terraform)](#2-upload-dashboards-terraform)
-  - [📂 Cấu trúc thư mục](#-cấu-trúc-thư-mục)
-  - [🔍 Debugging](#-debugging)
+- [📋 Tính năng](#-tính-năng)
+- [🛠 Yêu cầu](#-yêu-cầu)
+- [⚙️ Chuẩn bị](#-chuẩn-bị)
+  - [1. Sao chép cấu hình mẫu](#1-sao-chép-cấu-hình-mẫu)
+  - [2. Hay đổi `.env` (nếu dùng Cloud)](#2-hay-đổi-env-nếu-dùng-cloud)
+  - [3. Lấy thông tin Grafana Cloud](#3-lấy-thông-tin-grafana-cloud)
+- [🚀 Triển khai](#-triển-khai)
+  - [A. Self-hosted Stack (Prometheus + Loki + Grafana)](#a-self-hosted-stack-prometheus--loki--grafana)
+  - [B. Grafana Cloud Stack (Alloy → Cloud)](#b-grafana-cloud-stack-alloy--cloud)
+  - [C. Lệnh tiện ích](#c-lệnh-tiện-ích)
+- [📂 Cấu trúc thư mục](#-cấu-trúc-thư-mục)
+- [🔍 Debugging](#-debugging)
 
 ## 📋 Tính năng
 
-- **Nginx**: Web server với cấu hình mẫu.
-- **Grafana Alloy**: Agent thu thập dữ liệu thay thế cho `node_exporter` và `cadvisor`.
-  - Thu thập System metrics (CPU, RAM, Disk, Network).
-  - Thu thập Container metrics.
-  - Thu thập Nginx logs và metrics.
-- **Grafana Cloud**: Lưu trữ và hiển thị dữ liệu.
-- **Terraform**: Quản lý Dashboards trên Grafana Cloud.
+- **Nginx**: service mẫu với `stub_status` và log cấu trúc.
+- **Grafana Alloy**: thay thế cho `node_exporter` + `cAdvisor` + Fluentd.
+  - Thu thập system metrics, container metrics và log Docker.
+  - Parse và enrich Nginx access log (GeoIP, histogram latency, label level).
+- **Prometheus/Loki/Grafana**: chạy nội bộ hoặc sử dụng Grafana Cloud.
+- **Terraform**: quản lý dashboards dưới dạng code, có thể push lên Cloud.
 
 ## 🛠 Yêu cầu
 
-- Docker & Docker Compose
-- Make
-- Tài khoản Grafana Cloud (để lấy API Key và URL)
+- Docker & Docker Compose (hoặc Docker Desktop có Swarm mode).
+- Make.
+- **Chỉ khi chạy chế độ Cloud:** tài khoản Grafana Cloud + API Key (Metrics & Logs).
 
-## 🚀 Cài đặt & Cấu hình
+## ⚙️ Chuẩn bị
 
-### 1. Khởi tạo môi trường
-
-Copy các file cấu hình mẫu:
+### 1. Sao chép cấu hình mẫu
 
 ```bash
-# Copy file môi trường
-cp .env.example .env
-
-# Copy cấu hình Nginx
+cp .env.example .env                    # Bắt buộc cho chế độ Cloud
 cp nginx/nginx_sites_available.example nginx/nginx_sites_available
 ```
 
-**Lưu ý:** Cập nhật file `.env` với thông tin xác thực của Grafana Cloud:
+### 2. Hay đổi `.env` (nếu dùng Cloud)
 
-- `GRAFANA_CLOUD_LOKI_USER`
-- `GRAFANA_CLOUD_API_KEY`
-- `GRAFANA_CLOUD_LOKI_RULES_URL`
-- ...
+Bổ sung các biến Grafana Cloud (không bắt buộc cho self-hosted):
 
-### 2. Triển khai (Deployment)
+- `GRAFANA_CLOUD_PROM_URL`, `GRAFANA_CLOUD_PROM_USER`
+- `GRAFANA_CLOUD_LOKI_URL`, `GRAFANA_CLOUD_LOKI_USER`
+- `GRAFANA_CLOUD_API_KEY`, `GRAFANA_CLOUD_LOKI_RULES_URL`
+- `TF_VAR_*` nếu muốn Terraform deploy dashboards lên Cloud.
 
-Sử dụng `Makefile` để quản lý các lệnh Docker Swarm.
+### 3. Lấy thông tin Grafana Cloud
 
-**Khởi tạo Docker Swarm (chạy lần đầu):**
+1. **Đăng nhập** [grafana.com](https://grafana.com) → Grafana Cloud → chọn stack.
+2. **Prometheus**
+   - Remote write endpoint → `GRAFANA_CLOUD_PROM_URL`
+   - Username (ID dạng số) → `GRAFANA_CLOUD_PROM_USER`
+3. **Loki**
+   - Push URL → `GRAFANA_CLOUD_LOKI_URL`
+   - Username (ID dạng số) → `GRAFANA_CLOUD_LOKI_USER`
+4. **API Key**
+   - Grafana Cloud Portal → API Keys → tạo token với quyền Admin → `GRAFANA_CLOUD_API_KEY`
+5. **Loki Rules URL (optional)**
+   - Trong Grafana Cloud, mở **Loki → Alerting → Alert rules → Configure** (hoặc “Manage rules” ở giao diện cũ).
+   - Chọn namespace bạn muốn upload rules (ví dụ `grafanacloud-<tên>-logs`), nhấn dấu ⋮ → **Show API info**.
+   - Copy endpoint `https://logs-prod-.../api/v1/rules/<namespace>` → `GRAFANA_CLOUD_LOKI_RULES_URL`.
+6. **Terraform**
+   - `TF_VAR_grafana_url`: URL của Grafana Cloud (`https://<workspace>.grafana.net`)
+   - `TF_VAR_grafana_auth`: API token có quyền quản lý dashboards (Viewer/Editor)
+   - `TF_VAR_loki_ds_name`, `TF_VAR_prom_ds_name`: trùng tên datasource Grafana Cloud tạo sẵn
 
-```bash
-make swarm
-```
+## 🚀 Triển khai
 
-**Deploy Stack (Nginx + Alloy):**
+Toàn bộ lệnh đã được gom trong `Makefile`.
 
-```bash
-make stack
-```
-
-**Cập nhật Nginx Service (khi sửa config):**
-
-```bash
-make deploy
-```
-
-## 📊 Quản lý Rules & Dashboards
-
-### 1. Nạp Loki Rules (Alerting/Recording Rules)
-
-Lệnh sau sẽ upload file `loki_rules/loki-rules.yaml` lên Grafana Cloud Loki:
-
-```bash
-docker run --rm \
-  --env-file .env \
-  -v "$PWD/loki_rules":/data \
-  -w /data \
-  --entrypoint /bin/sh \
-  curlimages/curl:latest \
-  -c 'curl -v -X POST -H "Content-Type: application/yaml" -u "$GRAFANA_CLOUD_LOKI_USER:$GRAFANA_CLOUD_API_KEY" --data-binary @loki-rules.yaml "$GRAFANA_CLOUD_LOKI_RULES_URL"'
-```
-
-### 2. Upload Dashboards (Terraform)
-
-Sử dụng Terraform để tự động tạo và cập nhật Dashboards trên Grafana Cloud.
-
-**Khởi tạo Terraform:**
+### A. Self-hosted Stack (Prometheus + Loki + Grafana)
 
 ```bash
-docker run --rm --env-file .env -v "$PWD":/workspace -w /workspace/terraform hashicorp/terraform:light init
+make swarm       # Khởi tạo Docker Swarm (chạy 1 lần duy nhất)
+make stack_host  # Deploy nginx + alloy + prometheus + loki + grafana
+make deploy      # Rolling update service nginx sau khi đổi config
 ```
 
-**Apply Dashboards:**
+### B. Grafana Cloud Stack (Alloy → Cloud)
 
 ```bash
-docker run --rm --env-file .env -v "$PWD":/workspace -w /workspace/terraform hashicorp/terraform:light apply -auto-approve
+make terraform_init   # (khuyến nghị) chuẩn bị provider & modules cho dashboards
+make terraform_apply  # tạo datasource + dashboards trên Grafana Cloud
+make apply_rules      # upload Loki recording rules lên Grafana Cloud
+make stack_cloud      # Deploy nginx + alloy, bắt đầu đẩy dữ liệu lên Grafana Cloud
+make deploy_cloud     # Update riêng service nginx trong stack cloud
 ```
 
-**Format code Terraform:**
+> Cả hai stack cùng dùng `alloy/config.alloy`. Chế độ Cloud cần các biến `GRAFANA_CLOUD_*` trong `.env`. Stack self-host tự khai báo sẵn giá trị mặc định qua `docker-compose.yml`, nên không phải tạo `.env`.
 
-```bash
-docker run --rm -v "$PWD":/workspace -w /workspace/terraform hashicorp/terraform:light fmt
-```
+### C. Lệnh tiện ích
 
-**Xóa Dashboards (Destroy):**
-
-```bash
-docker run --rm --env-file .env -v "$PWD":/workspace -w /workspace/terraform hashicorp/terraform:light destroy -auto-approve
-```
+- `make stack_nginx`: chỉ redeploy service nginx (COMMON_REPLICAS=0).
+- `make apply_rules`: upload `loki_rules/loki-rules.yaml` lên Grafana Cloud Loki.
+- `make terraform_init|apply|destroy|fmt`: chạy Terraform trong container `hashicorp/terraform:light`.
 
 ## 📂 Cấu trúc thư mục
 
-- `alloy/`: Cấu hình cho Grafana Alloy.
-- `loki_rules/`: Các rules cho Loki (Alerts, Recording rules).
-- `nginx/`: Cấu hình Nginx.
-- `terraform/`: Mã nguồn Terraform để quản lý Dashboards.
-- `docker-compose.swarm.yml`: File định nghĩa stack cho Docker Swarm.
-- `Makefile`: Các lệnh shortcut.
+- `alloy/`
+  - `config.alloy`: pipeline duy nhất, tự động remote write về Prometheus/Loki nội bộ hoặc Grafana Cloud tùy biến môi trường.
+- `loki_rules/`: recording rules để Alloy upload lên Cloud.
+- `nginx/`: cấu hình Nginx, bao gồm `nginx.conf` + `nginx_sites_available`.
+- `terraform/`: mã nguồn dashboards (sử dụng container Terraform).
+- `docker-compose.yml`: stack self-host.
+- `docker-compose.cloud.yml`: stack Grafana Cloud.
+- `Makefile`: tập hợp các lệnh tiện ích.
 
 ## 🔍 Debugging
 
-- **Grafana Alloy UI**: Truy cập `http://localhost:12345` để xem trạng thái của Alloy agent.
-- **Nginx**: Truy cập `http://localhost:80`.
+- Grafana Alloy UI: `http://localhost:12345`
+- Nginx: `http://localhost:80`
+- (Self-host) Grafana UI: `http://localhost:3456`

@@ -4,16 +4,18 @@ logging {
 }
 
 // ============================================================================
-// PROMETHEUS REMOTE WRITE
+// PROMETHEUS REMOTE WRITE (LOCAL OR CLOUD VIA ENV)
 // ============================================================================
-prometheus.remote_write "prometheus_cloud" {
+prometheus.remote_write "prometheus" {
   endpoint {
     url = env("GRAFANA_CLOUD_PROM_URL")
+
     queue_config {
       capacity             = 10000
       max_shards           = 10
       max_samples_per_send = 5000
     }
+
     basic_auth {
       username = env("GRAFANA_CLOUD_PROM_USER")
       password = env("GRAFANA_CLOUD_API_KEY")
@@ -51,7 +53,7 @@ prometheus.exporter.unix "system" {
 
 prometheus.scrape "system" {
   targets         = prometheus.exporter.unix.system.targets
-  forward_to      = [prometheus.remote_write.prometheus_cloud.receiver]
+  forward_to      = [prometheus.remote_write.prometheus.receiver]
   scrape_interval = "15s"
 }
 
@@ -71,7 +73,7 @@ prometheus.scrape "cadvisor" {
 }
 
 prometheus.relabel "cadvisor" {
-  forward_to = [prometheus.remote_write.prometheus_cloud.receiver]
+  forward_to = [prometheus.remote_write.prometheus.receiver]
 
   rule {
     source_labels = ["__address__"]
@@ -244,7 +246,7 @@ loki.source.docker "containers" {
 
 // Process để thêm log level detection và nginx log parsing
 loki.process "docker_logs" {
-  forward_to = [loki.write.loki_cloud.receiver]
+  forward_to = [loki.write.loki.receiver]
 
   // Parse NGINX access logs (only for nginx container)
   stage.match {
@@ -261,6 +263,14 @@ loki.process "docker_logs" {
     }
 
     stage.template {
+<<<<<<< HEAD
+=======
+      source   = "final_country_code"
+      template = "{{ if .geoip_country_code }}{{ .geoip_country_code }}{{ else }}UNKNOWN{{ end }}"
+    }
+
+    stage.template {
+>>>>>>> 6b1bdd6 (Apply host and cloud setup in one)
       source   = "final_country_name"
       template = "{{ if .geoip_country_name }}{{ .geoip_country_name }}{{ else }}Other{{ end }}"
     }
@@ -273,9 +283,16 @@ loki.process "docker_logs" {
 
     stage.labels {
       values = {
+<<<<<<< HEAD
         verb      = "verb",
         request   = "request_path",
         resp_code = "status",
+=======
+        verb         = "verb",
+        request      = "request_path",
+        resp_code    = "status",
+        country      = "final_country_code",
+>>>>>>> 6b1bdd6 (Apply host and cloud setup in one)
         country_name = "final_country_name",
       }
     }
@@ -317,11 +334,10 @@ loki.process "docker_logs" {
   }
 }
 
-loki.write "loki_cloud" {
+loki.write "loki" {
   endpoint {
     url = env("GRAFANA_CLOUD_LOKI_URL")
 
-    // SỬ DỤNG CREDENTIALS CỦA LOKI
     basic_auth {
       username = env("GRAFANA_CLOUD_LOKI_USER")
       password = env("GRAFANA_CLOUD_API_KEY")
@@ -335,7 +351,7 @@ loki.write "loki_cloud" {
 prometheus.exporter.self "alloy" {}
 
 prometheus.relabel "alloy_self_labels" {
-  forward_to = [prometheus.remote_write.prometheus_cloud.receiver]
+  forward_to = [prometheus.remote_write.prometheus.receiver]
 
   rule {
     action       = "replace"

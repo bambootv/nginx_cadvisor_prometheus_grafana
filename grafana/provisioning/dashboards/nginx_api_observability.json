@@ -1,0 +1,1422 @@
+{
+    "annotations": {
+        "list": [
+            {
+                "builtIn": 1,
+                "datasource": {
+                    "type": "grafana",
+                    "uid": "grafana"
+                },
+                "enable": true,
+                "hide": true,
+                "iconColor": "rgba(0, 211, 255, 1)",
+                "name": "Annotations & Alerts",
+                "type": "dashboard"
+            }
+        ]
+    },
+    "editable": true,
+    "fiscalYearStartMonth": 0,
+    "graphTooltip": 1,
+    "id": null,
+    "links": [],
+    "liveNow": false,
+    "panels": [
+        {
+            "type": "row",
+            "title": "I. Survival Cockpit",
+            "gridPos": {
+                "h": 1,
+                "w": 24,
+                "x": 0,
+                "y": 0
+            },
+            "id": 100,
+            "collapsed": false,
+            "panels": []
+        },
+        {
+            "id": 101,
+            "type": "stat",
+            "title": "Requests (Selected Range)",
+            "gridPos": {
+                "h": 4,
+                "w": 6,
+                "x": 0,
+                "y": 1
+            },
+            "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+            },
+            "targets": [
+                {
+                    "refId": "A",
+                    "expr": "sum(sum_over_time(loki_nginx_requests_total_by_verb_15s{request=~\"$request\", verb=~\"$verb\", resp_code=~\"$resp_code\"}[$__range]))",
+                    "range": false
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "short",
+                    "mappings": [],
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            }
+                        ]
+                    }
+                },
+                "overrides": []
+            },
+            "options": {
+                "colorMode": "value",
+                "graphMode": "area",
+                "justifyMode": "auto",
+                "orientation": "horizontal",
+                "reduceOptions": {
+                    "calcs": [
+                        "lastNotNull"
+                    ],
+                    "fields": "",
+                    "values": false
+                },
+                "textMode": "auto"
+            }
+        },
+        {
+            "id": 102,
+            "type": "stat",
+            "title": "Server Error Rate (%)",
+            "gridPos": {
+                "h": 4,
+                "w": 6,
+                "x": 6,
+                "y": 1
+            },
+            "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+            },
+            "targets": [
+                {
+                    "refId": "A",
+                    "expr": "(sum(sum_over_time(loki_nginx_requests_total_by_verb_15s{resp_code=~\"5..\", request=~\"$request\", verb=~\"$verb\"}[$__range])) / clamp_min(sum(sum_over_time(loki_nginx_requests_total_by_verb_15s{request=~\"$request\", verb=~\"$verb\", resp_code=~\"$resp_code\"}[$__range])), 1)) * 100",
+                    "range": false
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "percent",
+                    "mappings": [],
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            },
+                            {
+                                "color": "orange",
+                                "value": 1
+                            },
+                            {
+                                "color": "red",
+                                "value": 5
+                            }
+                        ]
+                    }
+                },
+                "overrides": []
+            },
+            "options": {
+                "colorMode": "value",
+                "graphMode": "area",
+                "justifyMode": "auto",
+                "orientation": "horizontal",
+                "reduceOptions": {
+                    "calcs": [
+                        "lastNotNull"
+                    ],
+                    "fields": "",
+                    "values": false
+                },
+                "textMode": "auto"
+            }
+        },
+        {
+            "id": 103,
+            "type": "stat",
+            "title": "Latency P95",
+            "gridPos": {
+                "h": 4,
+                "w": 6,
+                "x": 12,
+                "y": 1
+            },
+            "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+            },
+            "targets": [
+                {
+                    "refId": "A",
+                    "expr": "histogram_quantile(0.95, sum by (le) (increase(loki_process_custom_nginxlog_request_duration_seconds_bucket{request=~\"$request\", verb=~\"$verb\", resp_code=~\"$resp_code\"}[$__range])))",
+                    "range": false
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "s",
+                    "mappings": [],
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            }
+                        ]
+                    }
+                },
+                "overrides": []
+            },
+            "options": {
+                "colorMode": "value",
+                "graphMode": "area",
+                "justifyMode": "auto",
+                "orientation": "horizontal",
+                "reduceOptions": {
+                    "calcs": [
+                        "lastNotNull"
+                    ],
+                    "fields": "",
+                    "values": false
+                },
+                "sparkline": {
+                    "show": true
+                },
+                "textMode": "auto"
+            }
+        },
+        {
+            "id": 104,
+            "type": "stat",
+            "title": "Latency P99",
+            "gridPos": {
+                "h": 4,
+                "w": 6,
+                "x": 18,
+                "y": 1
+            },
+            "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+            },
+            "targets": [
+                {
+                    "refId": "A",
+                    "expr": "histogram_quantile(0.99, sum by (le) (increase(loki_process_custom_nginxlog_request_duration_seconds_bucket{request=~\"$request\", verb=~\"$verb\", resp_code=~\"$resp_code\"}[$__range])))",
+                    "range": false
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "s",
+                    "mappings": [],
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            }
+                        ]
+                    }
+                },
+                "overrides": []
+            },
+            "options": {
+                "colorMode": "value",
+                "graphMode": "area",
+                "justifyMode": "auto",
+                "orientation": "horizontal",
+                "reduceOptions": {
+                    "calcs": [
+                        "lastNotNull"
+                    ],
+                    "fields": "",
+                    "values": false
+                },
+                "sparkline": {
+                    "show": true
+                },
+                "textMode": "auto"
+            }
+        },
+        {
+            "type": "row",
+            "title": "II. War Room",
+            "gridPos": {
+                "h": 1,
+                "w": 24,
+                "x": 0,
+                "y": 5
+            },
+            "id": 200,
+            "collapsed": false,
+            "panels": []
+        },
+        {
+            "id": 201,
+            "type": "table",
+            "title": "Top 10 APIs by Requests (Range)",
+            "gridPos": {
+                "h": 9,
+                "w": 12,
+                "x": 0,
+                "y": 6
+            },
+            "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+            },
+            "targets": [
+                {
+                    "refId": "A",
+                    "expr": "topk(10, sum by (request, verb) (sum_over_time(loki_nginx_requests_total_by_verb_15s{resp_code=~\"$resp_code\", request=~\"$request\", verb=~\"$verb\"}[$__range])))",
+                    "format": "table",
+                    "instant": true
+                }
+            ],
+            "transformations": [
+                {
+                    "id": "labelsToFields",
+                    "options": {}
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "short",
+                    "custom": {
+                        "align": "auto"
+                    }
+                },
+                "overrides": []
+            },
+            "options": {
+                "showHeader": true,
+                "sortBy": [
+                    {
+                        "displayName": "Value",
+                        "desc": true
+                    }
+                ]
+            }
+        },
+        {
+            "id": 202,
+            "type": "table",
+            "title": "Top 10 Server Error APIs (5xx, Range)",
+            "gridPos": {
+                "h": 9,
+                "w": 12,
+                "x": 12,
+                "y": 6
+            },
+            "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+            },
+            "targets": [
+                {
+                    "refId": "A",
+                    "expr": "topk(10, sum by (request, verb, resp_code) (sum_over_time(loki_nginx_requests_total_by_verb_15s{resp_code=~\"5..\", request=~\"$request\", verb=~\"$verb\"}[$__range])))",
+                    "format": "table",
+                    "instant": true,
+                    "range": false
+                }
+            ],
+            "transformations": [
+                {
+                    "id": "labelsToFields",
+                    "options": {
+                        "valueLabel": "Value"
+                    }
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "custom": {
+                        "align": "left"
+                    },
+                    "unit": "short"
+                },
+                "overrides": []
+            },
+            "options": {
+                "showHeader": true,
+                "sortBy": [
+                    {
+                        "displayName": "Value",
+                        "desc": true
+                    }
+                ]
+            }
+        },
+        {
+            "id": 203,
+            "type": "table",
+            "title": "Top 10 Client Error APIs (4xx, Range)",
+            "gridPos": {
+                "h": 9,
+                "w": 12,
+                "x": 0,
+                "y": 15
+            },
+            "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+            },
+            "targets": [
+                {
+                    "refId": "A",
+                    "expr": "topk(10, sum by (request, verb, resp_code) (sum_over_time(loki_nginx_requests_total_by_verb_15s{resp_code=~\"4..\", request=~\"$request\", verb=~\"$verb\"}[$__range])))",
+                    "format": "table",
+                    "instant": true,
+                    "range": false
+                }
+            ],
+            "transformations": [
+                {
+                    "id": "labelsToFields",
+                    "options": {
+                        "valueLabel": "Value"
+                    }
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "custom": {
+                        "align": "left"
+                    },
+                    "unit": "short"
+                },
+                "overrides": []
+            },
+            "options": {
+                "showHeader": true,
+                "sortBy": [
+                    {
+                        "displayName": "Value",
+                        "desc": true
+                    }
+                ]
+            }
+        },
+        {
+            "id": 204,
+            "type": "table",
+            "title": "Top 10 Slow APIs (P95, Range)",
+            "gridPos": {
+                "h": 9,
+                "w": 12,
+                "x": 12,
+                "y": 15
+            },
+            "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+            },
+            "targets": [
+                {
+                    "refId": "A",
+                    "expr": "topk(10, histogram_quantile(0.95, sum by (le, request, verb) (increase(loki_process_custom_nginxlog_request_duration_seconds_bucket{request=~\"$request\", verb=~\"$verb\", resp_code=~\"$resp_code\"}[$__range])))>=0)",
+                    "format": "table",
+                    "instant": true,
+                    "range": false
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "s",
+                    "custom": {
+                        "align": "center"
+                    }
+                },
+                "overrides": []
+            },
+            "options": {
+                "showHeader": true
+            }
+        },
+        {
+            "type": "row",
+            "title": "III. Trends",
+            "gridPos": {
+                "h": 1,
+                "w": 24,
+                "x": 0,
+                "y": 24
+            },
+            "id": 300,
+            "collapsed": false,
+            "panels": []
+        },
+        {
+            "id": 301,
+            "type": "timeseries",
+            "title": "Request Volume by API (1m)",
+            "gridPos": {
+                "h": 9,
+                "w": 12,
+                "x": 0,
+                "y": 25
+            },
+            "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+            },
+            "targets": [
+                {
+                    "refId": "A",
+                    "expr": "(sum by (request) (loki_nginx_requests_total_by_verb_1m{request=~\"$request\", request=~\"/api.*\", verb=~\"$verb\", resp_code=~\"$resp_code\"})) > 0",
+                    "legendFormat": "{{request}}",
+                    "range": true
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "short",
+                    "custom": {
+                        "lineInterpolation": "stepAfter",
+                        "drawStyle": "line",
+                        "lineWidth": 1,
+                        "fillOpacity": 0,
+                        "gradientMode": "none",
+                        "spanNulls": false,
+                        "showPoints": "auto",
+                        "pointSize": 5,
+                        "stacking": {
+                            "mode": "none",
+                            "group": "A"
+                        },
+                        "axisPlacement": "auto",
+                        "barAlignment": 0,
+                        "scaleDistribution": {
+                            "type": "linear"
+                        }
+                    }
+                },
+                "overrides": []
+            },
+            "options": {
+                "legend": {
+                    "displayMode": "table",
+                    "placement": "right",
+                    "calcs": [],
+                    "width": 250
+                },
+                "tooltip": {
+                    "mode": "multi",
+                    "sort": "desc"
+                }
+            }
+        },
+        {
+            "id": 302,
+            "type": "timeseries",
+            "title": "Request Volume by Verb (1m)",
+            "gridPos": {
+                "h": 9,
+                "w": 12,
+                "x": 12,
+                "y": 25
+            },
+            "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+            },
+            "targets": [
+                {
+                    "refId": "A",
+                    "expr": "(sum by (verb) (loki_nginx_requests_total_by_verb_1m{request=~\"$request\", verb=~\"$verb\", resp_code=~\"$resp_code\"})) > 0",
+                    "legendFormat": "{{verb}}",
+                    "range": true
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "short",
+                    "custom": {
+                        "lineInterpolation": "stepAfter",
+                        "drawStyle": "line",
+                        "lineWidth": 1,
+                        "fillOpacity": 0,
+                        "gradientMode": "none",
+                        "spanNulls": false,
+                        "showPoints": "auto",
+                        "pointSize": 5,
+                        "stacking": {
+                            "mode": "none",
+                            "group": "A"
+                        },
+                        "axisPlacement": "auto",
+                        "barAlignment": 0,
+                        "scaleDistribution": {
+                            "type": "linear"
+                        }
+                    }
+                },
+                "overrides": []
+            },
+            "options": {
+                "legend": {
+                    "displayMode": "table",
+                    "placement": "right",
+                    "calcs": [],
+                    "width": 250
+                },
+                "tooltip": {
+                    "mode": "multi",
+                    "sort": "desc"
+                }
+            }
+        },
+        {
+            "id": 304,
+            "type": "timeseries",
+            "title": "2xx Response Volume by API (1m)",
+            "gridPos": {
+                "h": 9,
+                "w": 12,
+                "x": 0,
+                "y": 34
+            },
+            "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+            },
+            "targets": [
+                {
+                    "refId": "A",
+                    "expr": "(sum by (request) (loki_nginx_requests_total_by_verb_1m{request=~\"$request\", request=~\"/api.*\", verb=~\"$verb\", resp_code=~\"2..\"})) > 0",
+                    "legendFormat": "{{request}}",
+                    "range": true
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "short",
+                    "custom": {
+                        "drawStyle": "line",
+                        "lineWidth": 1,
+                        "fillOpacity": 10,
+                        "gradientMode": "none",
+                        "spanNulls": false,
+                        "showPoints": "auto",
+                        "pointSize": 5,
+                        "stacking": {
+                            "mode": "none",
+                            "group": "A"
+                        },
+                        "axisPlacement": "auto",
+                        "barAlignment": 0,
+                        "scaleDistribution": {
+                            "type": "linear"
+                        }
+                    },
+                    "color": {
+                        "mode": "palette-classic"
+                    }
+                },
+                "overrides": []
+            },
+            "options": {
+                "legend": {
+                    "displayMode": "table",
+                    "placement": "right",
+                    "calcs": [],
+                    "width": 250
+                },
+                "tooltip": {
+                    "mode": "multi",
+                    "sort": "desc"
+                }
+            }
+        },
+        {
+            "id": 305,
+            "type": "timeseries",
+            "title": "3xx Response Volume by API (1m)",
+            "gridPos": {
+                "h": 9,
+                "w": 12,
+                "x": 12,
+                "y": 34
+            },
+            "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+            },
+            "targets": [
+                {
+                    "refId": "A",
+                    "expr": "(sum by (request) (loki_nginx_requests_total_by_verb_1m{request=~\"$request\", request=~\"/api.*\", verb=~\"$verb\", resp_code=~\"3..\"})) > 0",
+                    "legendFormat": "{{request}}",
+                    "range": true
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "short",
+                    "custom": {
+                        "drawStyle": "line",
+                        "lineWidth": 1,
+                        "fillOpacity": 10,
+                        "gradientMode": "none",
+                        "spanNulls": false,
+                        "showPoints": "auto",
+                        "pointSize": 5,
+                        "stacking": {
+                            "mode": "none",
+                            "group": "A"
+                        },
+                        "axisPlacement": "auto",
+                        "barAlignment": 0,
+                        "scaleDistribution": {
+                            "type": "linear"
+                        }
+                    },
+                    "color": {
+                        "mode": "palette-classic"
+                    }
+                },
+                "overrides": []
+            },
+            "options": {
+                "legend": {
+                    "displayMode": "table",
+                    "placement": "right",
+                    "calcs": [],
+                    "width": 250
+                },
+                "tooltip": {
+                    "mode": "multi",
+                    "sort": "desc"
+                }
+            }
+        },
+        {
+            "id": 306,
+            "type": "timeseries",
+            "title": "4xx Response Volume by API (1m)",
+            "gridPos": {
+                "h": 9,
+                "w": 12,
+                "x": 0,
+                "y": 43
+            },
+            "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+            },
+            "targets": [
+                {
+                    "refId": "A",
+                    "expr": "(sum by (request) (loki_nginx_requests_total_by_verb_1m{request=~\"$request\", request=~\"/api.*\", verb=~\"$verb\", resp_code=~\"4..\"})) > 0",
+                    "legendFormat": "{{request}}",
+                    "range": true
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "short",
+                    "custom": {
+                        "drawStyle": "line",
+                        "lineWidth": 1,
+                        "fillOpacity": 10,
+                        "gradientMode": "none",
+                        "spanNulls": false,
+                        "showPoints": "auto",
+                        "pointSize": 5,
+                        "stacking": {
+                            "mode": "none",
+                            "group": "A"
+                        },
+                        "axisPlacement": "auto",
+                        "barAlignment": 0,
+                        "scaleDistribution": {
+                            "type": "linear"
+                        }
+                    },
+                    "color": {
+                        "mode": "palette-classic"
+                    }
+                },
+                "overrides": []
+            },
+            "options": {
+                "legend": {
+                    "displayMode": "table",
+                    "placement": "right",
+                    "calcs": [],
+                    "width": 250
+                },
+                "tooltip": {
+                    "mode": "multi",
+                    "sort": "desc"
+                }
+            }
+        },
+        {
+            "id": 307,
+            "type": "timeseries",
+            "title": "5xx Response Volume by API (1m)",
+            "gridPos": {
+                "h": 9,
+                "w": 12,
+                "x": 12,
+                "y": 43
+            },
+            "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+            },
+            "targets": [
+                {
+                    "refId": "A",
+                    "expr": "(sum by (request) (loki_nginx_requests_total_by_verb_1m{request=~\"$request\", request=~\"/api.*\", verb=~\"$verb\", resp_code=~\"5..\"})) > 0",
+                    "legendFormat": "{{request}}",
+                    "range": true
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "short",
+                    "custom": {
+                        "drawStyle": "line",
+                        "lineWidth": 1,
+                        "fillOpacity": 10,
+                        "gradientMode": "none",
+                        "spanNulls": false,
+                        "showPoints": "auto",
+                        "pointSize": 5,
+                        "stacking": {
+                            "mode": "none",
+                            "group": "A"
+                        },
+                        "axisPlacement": "auto",
+                        "barAlignment": 0,
+                        "scaleDistribution": {
+                            "type": "linear"
+                        }
+                    },
+                    "color": {
+                        "mode": "palette-classic"
+                    }
+                },
+                "overrides": []
+            },
+            "options": {
+                "legend": {
+                    "displayMode": "table",
+                    "placement": "right",
+                    "calcs": [],
+                    "width": 250
+                },
+                "tooltip": {
+                    "mode": "multi",
+                    "sort": "desc"
+                }
+            }
+        },
+        {
+            "id": 303,
+            "type": "timeseries",
+            "title": "Error Volume Mix (1m)",
+            "gridPos": {
+                "h": 9,
+                "w": 24,
+                "x": 0,
+                "y": 52
+            },
+            "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+            },
+            "targets": [
+                {
+                    "refId": "A",
+                    "expr": "(sum by (resp_code) (loki_nginx_requests_total_by_verb_1m{request=~\"$request\", verb=~\"$verb\", resp_code=~\"$resp_code\"})) > 0",
+                    "legendFormat": "{{resp_code}}",
+                    "range": true
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "short",
+                    "custom": {
+                        "drawStyle": "line",
+                        "lineWidth": 1,
+                        "fillOpacity": 70,
+                        "gradientMode": "none",
+                        "spanNulls": false,
+                        "showPoints": "auto",
+                        "pointSize": 5,
+                        "stacking": {
+                            "mode": "normal",
+                            "group": "A"
+                        },
+                        "axisPlacement": "auto",
+                        "barAlignment": 0,
+                        "scaleDistribution": {
+                            "type": "linear"
+                        }
+                    }
+                },
+                "overrides": []
+            },
+            "options": {
+                "legend": {
+                    "displayMode": "table",
+                    "placement": "right",
+                    "calcs": [],
+                    "width": 250
+                },
+                "tooltip": {
+                    "mode": "multi",
+                    "sort": "desc"
+                }
+            }
+        },
+        {
+            "type": "row",
+            "title": "IV. Geo Distribution",
+            "gridPos": {
+                "h": 1,
+                "w": 24,
+                "x": 0,
+                "y": 61
+            },
+            "id": 400,
+            "collapsed": false,
+            "panels": []
+        },
+        {
+            "id": 401,
+            "type": "geomap",
+            "title": "Requests by Country (Traffic Volume)",
+            "gridPos": {
+                "h": 10,
+                "w": 12,
+                "x": 0,
+                "y": 62
+            },
+            "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+            },
+            "targets": [
+                {
+                    "refId": "A",
+                    "expr": "sum by (country_name) (sum_over_time(loki_nginx_requests_total_by_country[$__range]))",
+                    "format": "table",
+                    "instant": true
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "short",
+                    "color": {
+                        "mode": "thresholds"
+                    },
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "rgba(0, 229, 255, 0.4)",
+                                "value": null
+                            },
+                            {
+                                "color": "#00B0FF",
+                                "value": 100
+                            },
+                            {
+                                "color": "#2979FF",
+                                "value": 1000
+                            },
+                            {
+                                "color": "#651FFF",
+                                "value": 5000
+                            },
+                            {
+                                "color": "#D500F9",
+                                "value": 10000
+                            }
+                        ]
+                    }
+                },
+                "overrides": []
+            },
+            "options": {
+                "view": {
+                    "id": "world",
+                    "lat": 0,
+                    "lon": 0,
+                    "zoom": 1
+                },
+                "basemap": {
+                    "config": {},
+                    "name": "CartoDB Positron",
+                    "type": "carto"
+                },
+                "layers": [
+                    {
+                        "type": "markers",
+                        "config": {
+                            "style": {
+                                "size": {
+                                    "field": "Value",
+                                    "fixed": 5,
+                                    "max": 35,
+                                    "min": 4
+                                },
+                                "color": {
+                                    "field": "Value",
+                                    "mode": "thresholds"
+                                },
+                                "opacity": 0.8,
+                                "symbol": {
+                                    "fixed": "circle",
+                                    "mode": "fixed"
+                                }
+                            },
+                            "showLegend": true,
+                            "tooltip": true
+                        },
+                        "location": {
+                            "mode": "lookup",
+                            "lookup": "country_name"
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "id": 402,
+            "type": "geomap",
+            "title": "Error Requests (4xx/5xx - Warning Zone)",
+            "gridPos": {
+                "h": 10,
+                "w": 12,
+                "x": 12,
+                "y": 62
+            },
+            "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+            },
+            "targets": [
+                {
+                    "refId": "A",
+                    "expr": "sum by (country_name) (sum_over_time(loki_nginx_requests_total_by_country{resp_code=~\"4..|5..\"}[$__range]))",
+                    "format": "table",
+                    "instant": true
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "short",
+                    "color": {
+                        "mode": "thresholds"
+                    },
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "#4caf50",
+                                "value": null
+                            },
+                            {
+                                "color": "#FFC107",
+                                "value": 1
+                            },
+                            {
+                                "color": "#FF5722",
+                                "value": 50
+                            },
+                            {
+                                "color": "#D50000",
+                                "value": 200
+                            }
+                        ]
+                    }
+                },
+                "overrides": []
+            },
+            "options": {
+                "view": {
+                    "id": "world",
+                    "lat": 0,
+                    "lon": 0,
+                    "zoom": 1
+                },
+                "basemap": {
+                    "config": {},
+                    "name": "CartoDB Dark",
+                    "type": "carto"
+                },
+                "layers": [
+                    {
+                        "type": "markers",
+                        "config": {
+                            "style": {
+                                "size": {
+                                    "field": "Value",
+                                    "fixed": 5,
+                                    "max": 30,
+                                    "min": 5
+                                },
+                                "color": {
+                                    "field": "Value",
+                                    "mode": "thresholds"
+                                },
+                                "opacity": 0.9,
+                                "symbol": {
+                                    "fixed": "circle",
+                                    "mode": "fixed"
+                                }
+                            },
+                            "showLegend": true,
+                            "tooltip": true
+                        },
+                        "location": {
+                            "mode": "lookup",
+                            "lookup": "country_name"
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "id": 403,
+            "type": "table",
+            "title": "Top Countries Statistics (Detailed View)",
+            "gridPos": {
+                "h": 10,
+                "w": 24,
+                "x": 0,
+                "y": 72
+            },
+            "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+            },
+            "targets": [
+                {
+                    "refId": "A",
+                    "expr": "sum by (country_name) (sum_over_time(loki_nginx_requests_total_by_country[$__range]))",
+                    "format": "table",
+                    "instant": true,
+                    "legendFormat": "Total Requests"
+                },
+                {
+                    "refId": "B",
+                    "expr": "sum by (country_name) (sum_over_time(loki_nginx_requests_total_by_country{resp_code=~\"4..|5..\"}[$__range]))",
+                    "format": "table",
+                    "instant": true,
+                    "legendFormat": "All Errors (4xx+5xx)"
+                },
+                {
+                    "refId": "C",
+                    "expr": "sum by (country_name) (sum_over_time(loki_nginx_requests_total_by_country{resp_code=~\"5..\"}[$__range]))",
+                    "format": "table",
+                    "instant": true,
+                    "legendFormat": "Critical (5xx)"
+                }
+            ],
+            "transformations": [
+                {
+                    "id": "joinByField",
+                    "options": {
+                        "byField": "country_name",
+                        "mode": "outer"
+                    }
+                },
+                {
+                    "id": "organize",
+                    "options": {
+                        "excludeByName": {
+                            "Time": true
+                        },
+                        "indexByName": {
+                            "country_name": 0,
+                            "Total Requests": 1,
+                            "All Errors (4xx+5xx)": 2,
+                            "Critical (5xx)": 3
+                        },
+                        "renameByName": {
+                            "country_name": "Country",
+                            "Value #A": "Total Requests",
+                            "Value #B": "All Errors (4xx+5xx)",
+                            "Value #C": "Critical (5xx)"
+                        }
+                    }
+                },
+                {
+                    "id": "sortBy",
+                    "options": {
+                        "fields": {},
+                        "sort": [
+                            {
+                                "field": "Total Requests",
+                                "desc": true
+                            }
+                        ]
+                    }
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "custom": {
+                        "align": "auto",
+                        "displayMode": "auto",
+                        "inspect": false
+                    },
+                    "mappings": [],
+                    "color": {
+                        "mode": "thresholds"
+                    },
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "transparent",
+                                "value": null
+                            }
+                        ]
+                    }
+                },
+                "overrides": [
+                    {
+                        "matcher": {
+                            "id": "byName",
+                            "options": "Total Requests"
+                        },
+                        "properties": [
+                            {
+                                "id": "custom.displayMode",
+                                "value": "gradient-gauge"
+                            },
+                            {
+                                "id": "color",
+                                "value": {
+                                    "mode": "continuous-GrYlRd"
+                                }
+                            },
+                            {
+                                "id": "unit",
+                                "value": "short"
+                            }
+                        ]
+                    },
+                    {
+                        "matcher": {
+                            "id": "byName",
+                            "options": "All Errors (4xx+5xx)"
+                        },
+                        "properties": [
+                            {
+                                "id": "custom.displayMode",
+                                "value": "lcd-gauge"
+                            },
+                            {
+                                "id": "color",
+                                "value": {
+                                    "mode": "fixed",
+                                    "fixedColor": "orange"
+                                }
+                            },
+                            {
+                                "id": "unit",
+                                "value": "short"
+                            }
+                        ]
+                    },
+                    {
+                        "matcher": {
+                            "id": "byName",
+                            "options": "Critical (5xx)"
+                        },
+                        "properties": [
+                            {
+                                "id": "custom.displayMode",
+                                "value": "lcd-gauge"
+                            },
+                            {
+                                "id": "color",
+                                "value": {
+                                    "mode": "thresholds"
+                                }
+                            },
+                            {
+                                "id": "thresholds",
+                                "value": {
+                                    "mode": "absolute",
+                                    "steps": [
+                                        {
+                                            "color": "green",
+                                            "value": null
+                                        },
+                                        {
+                                            "color": "#ff0000",
+                                            "value": 1
+                                        }
+                                    ]
+                                }
+                            },
+                            {
+                                "id": "unit",
+                                "value": "short"
+                            }
+                        ]
+                    }
+                ]
+            },
+            "options": {
+                "showHeader": true,
+                "footer": {
+                    "show": true,
+                    "enablePagination": true,
+                    "countRows": false,
+                    "fields": ""
+                }
+            }
+        }
+    ],
+    "refresh": "30s",
+    "schemaVersion": 38,
+    "style": "dark",
+    "tags": [
+        "nginx",
+        "loki",
+        "requests",
+        "api",
+        "observability"
+    ],
+    "templating": {
+        "list": [
+            {
+                "name": "request",
+                "label": "Request",
+                "type": "query",
+                "datasource": {
+                    "type": "prometheus",
+                    "uid": "prometheus"
+                },
+                "definition": "label_values(loki_nginx_requests_rate_by_verb, request)",
+                "query": {
+                    "query": "label_values(loki_nginx_requests_rate_by_verb, request)",
+                    "refId": "PrometheusVariableQueryEditor-VariableQuery"
+                },
+                "refresh": 1,
+                "multi": true,
+                "includeAll": true,
+                "allValue": ".*",
+                "current": {
+                    "selected": true,
+                    "text": [
+                        "All"
+                    ],
+                    "value": [
+                        "$__all"
+                    ]
+                },
+                "sort": 0
+            },
+            {
+                "name": "verb",
+                "label": "Verb",
+                "type": "query",
+                "datasource": {
+                    "type": "prometheus",
+                    "uid": "prometheus"
+                },
+                "definition": "label_values(loki_nginx_requests_rate_by_verb{request=~\"$request\"}, verb)",
+                "query": {
+                    "query": "label_values(loki_nginx_requests_rate_by_verb{request=~\"$request\"}, verb)",
+                    "refId": "PrometheusVariableQueryEditor-VariableQuery"
+                },
+                "refresh": 2,
+                "multi": true,
+                "includeAll": true,
+                "allValue": ".*",
+                "current": {
+                    "selected": true,
+                    "text": [
+                        "All"
+                    ],
+                    "value": [
+                        "$__all"
+                    ]
+                },
+                "sort": 0
+            },
+            {
+                "name": "resp_code",
+                "label": "Response Code",
+                "type": "query",
+                "datasource": {
+                    "type": "prometheus",
+                    "uid": "prometheus"
+                },
+                "definition": "label_values(loki_nginx_requests_rate_by_verb, resp_code)",
+                "query": {
+                    "query": "label_values(loki_nginx_requests_rate_by_verb, resp_code)",
+                    "refId": "PrometheusVariableQueryEditor-VariableQuery"
+                },
+                "refresh": 1,
+                "multi": true,
+                "includeAll": true,
+                "allValue": ".*",
+                "current": {
+                    "selected": true,
+                    "text": [
+                        "All"
+                    ],
+                    "value": [
+                        "$__all"
+                    ]
+                },
+                "sort": 0
+            }
+        ]
+    },
+    "time": {
+        "from": "now-1h",
+        "to": "now"
+    },
+    "timepicker": {
+        "refresh_intervals": [
+            "5s",
+            "10s",
+            "30s",
+            "1m",
+            "5m",
+            "15m",
+            "30m",
+            "1h",
+            "2h",
+            "1d"
+        ]
+    },
+    "timezone": "",
+    "title": "API Monitoring & Observability",
+    "uid": "nginx-api-observability",
+    "version": 1,
+    "weekStart": ""
+}

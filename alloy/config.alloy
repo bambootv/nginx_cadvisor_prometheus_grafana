@@ -115,22 +115,6 @@ prometheus.relabel "cadvisor" {
 }
 
 // ============================================================================
-// NGINX STUB STATUS
-// ============================================================================
-prometheus.scrape "nginx" {
-  targets = [
-    {
-      "__address__"      = "nginx:80",
-      "__metrics_path__" = "/nginx_status",
-      "job"              = "nginx",
-      "instance"         = "nginx_service",
-    },
-  ]
-
-  forward_to = [prometheus.remote_write.prometheus_cloud.receiver]
-}
-
-// ============================================================================
 // NGINX LOGS → LOKI (from Docker logs)
 // Note: Nginx logs are now sent to stdout/stderr and collected via Docker
 // Nginx-specific log processing is done in loki.process.docker_logs below
@@ -277,8 +261,8 @@ loki.process "docker_logs" {
     }
 
     stage.template {
-      source   = "final_country_code"
-      template = "{{ if .geoip_country_code }}{{ .geoip_country_code }}{{ else }}VN{{ end }}"
+      source   = "final_country_name"
+      template = "{{ if .geoip_country_name }}{{ .geoip_country_name }}{{ else }}Other{{ end }}"
     }
 
     // Extract request path (before query string)
@@ -292,7 +276,7 @@ loki.process "docker_logs" {
         verb      = "verb",
         request   = "request_path",
         resp_code = "status",
-        country   = "final_country_code",
+        country_name = "final_country_name",
       }
     }
 

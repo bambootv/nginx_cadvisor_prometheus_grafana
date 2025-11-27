@@ -483,7 +483,7 @@
             "targets": [
                 {
                     "refId": "A",
-                    "expr": "(sum by (request) (loki_nginx_requests_total_by_verb_1m{request=~\"$request\", verb=~\"$verb\", resp_code=~\"$resp_code\"})) > 0",
+                    "expr": "(sum by (request) (loki_nginx_requests_total_by_verb_1m{request=~\"$request\", request=~\"/api.*\", verb=~\"$verb\", resp_code=~\"$resp_code\"})) > 0",
                     "legendFormat": "{{request}}",
                     "range": true
                 }
@@ -603,7 +603,7 @@
             "targets": [
                 {
                     "refId": "A",
-                    "expr": "(sum by (request) (loki_nginx_requests_total_by_verb_1m{request=~\"$request\", verb=~\"$verb\", resp_code=~\"2..\"})) > 0",
+                    "expr": "(sum by (request) (loki_nginx_requests_total_by_verb_1m{request=~\"$request\", request=~\"/api.*\", verb=~\"$verb\", resp_code=~\"2..\"})) > 0",
                     "legendFormat": "{{request}}",
                     "range": true
                 }
@@ -665,7 +665,7 @@
             "targets": [
                 {
                     "refId": "A",
-                    "expr": "(sum by (request) (loki_nginx_requests_total_by_verb_1m{request=~\"$request\", verb=~\"$verb\", resp_code=~\"3..\"})) > 0",
+                    "expr": "(sum by (request) (loki_nginx_requests_total_by_verb_1m{request=~\"$request\", request=~\"/api.*\", verb=~\"$verb\", resp_code=~\"3..\"})) > 0",
                     "legendFormat": "{{request}}",
                     "range": true
                 }
@@ -727,7 +727,7 @@
             "targets": [
                 {
                     "refId": "A",
-                    "expr": "(sum by (request) (loki_nginx_requests_total_by_verb_1m{request=~\"$request\", verb=~\"$verb\", resp_code=~\"4..\"})) > 0",
+                    "expr": "(sum by (request) (loki_nginx_requests_total_by_verb_1m{request=~\"$request\", request=~\"/api.*\", verb=~\"$verb\", resp_code=~\"4..\"})) > 0",
                     "legendFormat": "{{request}}",
                     "range": true
                 }
@@ -789,7 +789,7 @@
             "targets": [
                 {
                     "refId": "A",
-                    "expr": "(sum by (request) (loki_nginx_requests_total_by_verb_1m{request=~\"$request\", verb=~\"$verb\", resp_code=~\"5..\"})) > 0",
+                    "expr": "(sum by (request) (loki_nginx_requests_total_by_verb_1m{request=~\"$request\", request=~\"/api.*\", verb=~\"$verb\", resp_code=~\"5..\"})) > 0",
                     "legendFormat": "{{request}}",
                     "range": true
                 }
@@ -923,7 +923,7 @@
             "targets": [
                 {
                     "refId": "A",
-                    "expr": "sum by (country) (sum_over_time(loki_nginx_requests_total_by_country[$__range]))",
+                    "expr": "sum by (country_name) (sum_over_time(loki_nginx_requests_total_by_country[$__range]))",
                     "format": "table",
                     "instant": true
                 }
@@ -1000,7 +1000,7 @@
                         },
                         "location": {
                             "mode": "lookup",
-                            "lookup": "country"
+                            "lookup": "country_name"
                         }
                     }
                 ]
@@ -1023,7 +1023,7 @@
             "targets": [
                 {
                     "refId": "A",
-                    "expr": "sum by (country) (sum_over_time(loki_nginx_requests_total_by_country{resp_code=~\"4..|5..\"}[$__range]))",
+                    "expr": "sum by (country_name) (sum_over_time(loki_nginx_requests_total_by_country{resp_code=~\"4..|5..\"}[$__range]))",
                     "format": "table",
                     "instant": true
                 }
@@ -1096,7 +1096,7 @@
                         },
                         "location": {
                             "mode": "lookup",
-                            "lookup": "country"
+                            "lookup": "country_name"
                         }
                     }
                 ]
@@ -1119,21 +1119,21 @@
             "targets": [
                 {
                     "refId": "A",
-                    "expr": "sum by (country) (sum_over_time(loki_nginx_requests_total_by_country[$__range]))",
+                    "expr": "sum by (country_name) (sum_over_time(loki_nginx_requests_total_by_country[$__range]))",
                     "format": "table",
                     "instant": true,
                     "legendFormat": "Total Requests"
                 },
                 {
                     "refId": "B",
-                    "expr": "sum by (country) (sum_over_time(loki_nginx_requests_total_by_country{resp_code=~\"4..|5..\"}[$__range]))",
+                    "expr": "sum by (country_name) (sum_over_time(loki_nginx_requests_total_by_country{resp_code=~\"4..|5..\"}[$__range]))",
                     "format": "table",
                     "instant": true,
                     "legendFormat": "All Errors (4xx+5xx)"
                 },
                 {
                     "refId": "C",
-                    "expr": "sum by (country) (sum_over_time(loki_nginx_requests_total_by_country{resp_code=~\"5..\"}[$__range]))",
+                    "expr": "sum by (country_name) (sum_over_time(loki_nginx_requests_total_by_country{resp_code=~\"5..\"}[$__range]))",
                     "format": "table",
                     "instant": true,
                     "legendFormat": "Critical (5xx)"
@@ -1143,7 +1143,7 @@
                 {
                     "id": "joinByField",
                     "options": {
-                        "byField": "country",
+                        "byField": "country_name",
                         "mode": "outer"
                     }
                 },
@@ -1154,12 +1154,13 @@
                             "Time": true
                         },
                         "indexByName": {
-                            "country": 0,
+                            "country_name": 0,
                             "Total Requests": 1,
                             "All Errors (4xx+5xx)": 2,
                             "Critical (5xx)": 3
                         },
                         "renameByName": {
+                            "country_name": "Country",
                             "Value #A": "Total Requests",
                             "Value #B": "All Errors (4xx+5xx)",
                             "Value #C": "Critical (5xx)"

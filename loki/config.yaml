@@ -65,7 +65,7 @@ schema_config:
         period: 24h
 
 ruler:
-  rule_path: /loki/rules_storage # Đọc rules động từ API
+
   storage:
     type: local
     local:

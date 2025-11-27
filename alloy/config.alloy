@@ -89,15 +89,33 @@ prometheus.scrape "nginx" {
 }
 
 // ============================================================================
-// NGINX LOGS → LOKI (Thay inputs.tail)
+// NGINX LOGS → LOKI (Reading from Docker stdout)
 // ============================================================================
-loki.source.file "nginx_access" {
-  targets = [{
-    __path__  = "/var/log/nginx/access.log",
-    job       = "nginx",
-    instance  = "nginx",
-  }]  // DẤU PHẨY CUỐI CÙNG
-  forward_to = [loki.process.nginx.receiver]
+discovery.docker "nginx_discovery" {
+	host = "unix:///var/run/docker.sock"
+	filter {
+		name   = "label"
+		values = ["com.docker.swarm.service.name=monitoring_nginx"]
+	}
+}
+
+discovery.relabel "nginx_relabel" {
+	targets = discovery.docker.nginx_discovery.targets
+
+	rule {
+		source_labels = ["__meta_docker_container_name"]
+		target_label  = "container"
+	}
+	rule {
+		target_label = "job"
+		replacement  = "nginx" // Match the Loki rule: {job="nginx"}
+	}
+}
+
+loki.source.docker "nginx_logs" {
+	host       = "unix:///var/run/docker.sock"
+	targets    = discovery.relabel.nginx_relabel.output
+	forward_to = [loki.process.nginx.receiver]
 }
 
 loki.process "nginx" {
@@ -231,11 +249,6 @@ discovery.relabel "all_containers_relabel" {
   rule {
     source_labels = ["__meta_docker_compose_service"]
     target_label  = "compose_service"
-  }
-  // Rule 4: Giữ lại các label mặc định từ docker
-  rule {
-    action = "labelmap"
-    regex  = "__meta_docker_container_label_(.+)"
   }
 }
 

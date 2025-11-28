@@ -38,7 +38,7 @@
         {
             "id": 101,
             "type": "stat",
-            "title": "Requests (Selected Range)",
+            "title": "Traffic Overview",
             "gridPos": {
                 "h": 4,
                 "w": 6,
@@ -52,13 +52,19 @@
             "targets": [
                 {
                     "refId": "A",
+                    "expr": "sum(loki_nginx_requests_rate_by_verb{request=~\"$request\", verb=~\"$verb\", resp_code=~\"$resp_code\"})",
+                    "legendFormat": "Current Speed",
+                    "range": true
+                },
+                {
+                    "refId": "B",
                     "expr": "sum(sum_over_time(loki_nginx_requests_total_by_verb_15s{request=~\"$request\", verb=~\"$verb\", resp_code=~\"$resp_code\"}[$__range]))",
-                    "range": false
+                    "legendFormat": "Total Requests",
+                    "range": true
                 }
             ],
             "fieldConfig": {
                 "defaults": {
-                    "unit": "short",
                     "mappings": [],
                     "thresholds": {
                         "mode": "absolute",
@@ -66,11 +72,48 @@
                             {
                                 "color": "green",
                                 "value": null
+                            },
+                            {
+                                "color": "#EAB839",
+                                "value": 50
+                            },
+                            {
+                                "color": "red",
+                                "value": 100
                             }
                         ]
                     }
                 },
-                "overrides": []
+                "overrides": [
+                    {
+                        "matcher": {
+                            "id": "byName",
+                            "options": "Current Speed"
+                        },
+                        "properties": [
+                            {
+                                "id": "unit",
+                                "value": "reqps"
+                            },
+                            {
+                                "id": "custom.width",
+                                "value": null
+                            }
+                        ]
+                    },
+                    {
+                        "matcher": {
+                            "id": "byName",
+                            "options": "Total Requests"
+                        },
+                        "properties": [
+                            {
+                                "id": "unit",
+                                "value": "short"
+                            }
+                        ]
+                    }
+                ]
             },
             "options": {
                 "colorMode": "value",

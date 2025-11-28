@@ -538,6 +538,8 @@
                         }
                     },
                     "mappings": [],
+                    "min": 0,
+                    "max": 100,
                     "thresholds": {
                         "mode": "absolute",
                         "steps": [
@@ -547,7 +549,7 @@
                             }
                         ]
                     },
-                    "unit": "bytes"
+                    "unit": "percent"
                 },
                 "overrides": []
             },
@@ -581,8 +583,8 @@
                         "uid": "prometheus"
                     },
                     "editorMode": "code",
-                    "expr": "avg(node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes)",
-                    "legendFormat": "Used",
+                    "expr": "(node_memory_MemTotal_bytes - node_memory_MemFree_bytes - node_memory_Buffers_bytes - node_memory_Cached_bytes) / node_memory_MemTotal_bytes * 100",
+                    "legendFormat": "Used (App)",
                     "range": true,
                     "refId": "A"
                 },
@@ -592,7 +594,7 @@
                         "uid": "prometheus"
                     },
                     "editorMode": "code",
-                    "expr": "avg(node_memory_Buffers_bytes)",
+                    "expr": "node_memory_Buffers_bytes / node_memory_MemTotal_bytes * 100",
                     "legendFormat": "Buffers",
                     "range": true,
                     "refId": "B"
@@ -603,7 +605,7 @@
                         "uid": "prometheus"
                     },
                     "editorMode": "code",
-                    "expr": "avg(node_memory_Cached_bytes)",
+                    "expr": "node_memory_Cached_bytes / node_memory_MemTotal_bytes * 100",
                     "legendFormat": "Cached",
                     "range": true,
                     "refId": "C"
@@ -614,13 +616,13 @@
                         "uid": "prometheus"
                     },
                     "editorMode": "code",
-                    "expr": "avg(node_memory_MemFree_bytes)",
+                    "expr": "node_memory_MemFree_bytes / node_memory_MemTotal_bytes * 100",
                     "legendFormat": "Free",
                     "range": true,
                     "refId": "D"
                 }
             ],
-            "title": "Memory Usage Breakdown",
+            "title": "Memory Usage Breakdown (%)",
             "type": "timeseries"
         },
         {

@@ -263,14 +263,6 @@ loki.process "docker_logs" {
     }
 
     stage.template {
-<<<<<<< HEAD
-=======
-      source   = "final_country_code"
-      template = "{{ if .geoip_country_code }}{{ .geoip_country_code }}{{ else }}UNKNOWN{{ end }}"
-    }
-
-    stage.template {
->>>>>>> 6b1bdd6 (Apply host and cloud setup in one)
       source   = "final_country_name"
       template = "{{ if .geoip_country_name }}{{ .geoip_country_name }}{{ else }}Other{{ end }}"
     }
@@ -283,16 +275,9 @@ loki.process "docker_logs" {
 
     stage.labels {
       values = {
-<<<<<<< HEAD
-        verb      = "verb",
-        request   = "request_path",
-        resp_code = "status",
-=======
         verb         = "verb",
         request      = "request_path",
         resp_code    = "status",
-        country      = "final_country_code",
->>>>>>> 6b1bdd6 (Apply host and cloud setup in one)
         country_name = "final_country_name",
       }
     }

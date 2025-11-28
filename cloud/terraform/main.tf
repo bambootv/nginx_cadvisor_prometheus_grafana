@@ -59,13 +59,13 @@ resource "grafana_folder" "dynamic_folder" {
 
 # 3. Đẩy Dashboard
 resource "grafana_dashboard" "deploy_dashboards" {
-  for_each = fileset("${path.module}/dashboards", "*.json")
+  for_each = fileset("${path.module}/../../common/dashboards", "*.json")
   folder   = grafana_folder.dynamic_folder.id
 
   # Magic Replace UID
   config_json = replace(
     replace(
-      file("${path.module}/dashboards/${each.key}"),
+      file("${path.module}/../../common/dashboards/${each.key}"),
       "\"uid\": \"loki\"", "\"uid\": \"${data.grafana_data_source.loki.uid}\""
     ),
     "\"uid\": \"prometheus\"", "\"uid\": \"${data.grafana_data_source.prom.uid}\""

@@ -24,10 +24,10 @@ services:
     ports:
       - "80:80"
     volumes:
-      - ./common/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./common/nginx/nginx_sites_available:/etc/nginx/conf.d/default.conf:ro
+      - ../common/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ../common/nginx/nginx_sites_available:/etc/nginx/conf.d/default.conf:ro
     networks:
-      - monitoring_swarm_cloud
+      - monitoring_swarm
     deploy:
       mode: replicated
       replicas: ${NGINX_REPLICAS:-1}
@@ -61,11 +61,11 @@ services:
     ports:
       - "12345:12345" # Alloy UI
     env_file:
-      - "./.env"
+      - "../.env"
     volumes:
       # --- Configuration & Data ---
-      - ./common/alloy/config.alloy:/etc/alloy/config.alloy:ro
-      - ./common/alloy/geoip:/etc/alloy/geoip:ro
+      - ../common/alloy/config.alloy:/etc/alloy/config.alloy:ro
+      - ../common/alloy/geoip:/etc/alloy/geoip:ro
       - alloy_data:/var/lib/alloy
 
       # --- Common Mounts (Works on macOS & Linux) ---
@@ -91,7 +91,7 @@ services:
       - --server.http.listen-addr=0.0.0.0:12345
       - --storage.path=/var/lib/alloy/data
     networks:
-      - monitoring_swarm_cloud
+      - monitoring_swarm
     # cAdvisor needs privileges to access container metrics
     privileged: true
     deploy: *deploy_config
@@ -100,7 +100,7 @@ volumes:
   alloy_data:
 
 networks:
-  monitoring_swarm_cloud:
+  monitoring_swarm:
     driver: overlay
     ipam:
       config:

@@ -483,7 +483,7 @@
             "targets": [
                 {
                     "refId": "A",
-                    "expr": "(sum by (request) (loki_nginx_requests_total_by_verb_1m{request=~\"$request\", verb=~\"$verb\", resp_code=~\"$resp_code\"})) > 0",
+                    "expr": "(sum by (request) (loki_nginx_requests_total_by_verb_1m{request=~\"$request\", request=~\".*/api.*\", verb=~\"$verb\", resp_code=~\"$resp_code\"})) > 0",
                     "legendFormat": "{{request}}",
                     "range": true
                 }
@@ -603,7 +603,7 @@
             "targets": [
                 {
                     "refId": "A",
-                    "expr": "(sum by (request) (loki_nginx_requests_total_by_verb_1m{request=~\"$request\", verb=~\"$verb\", resp_code=~\"2..\"})) > 0",
+                    "expr": "(sum by (request) (loki_nginx_requests_total_by_verb_1m{request=~\"$request\", request=~\".*/api.*\", verb=~\"$verb\", resp_code=~\"2..\"})) > 0",
                     "legendFormat": "{{request}}",
                     "range": true
                 }
@@ -665,7 +665,7 @@
             "targets": [
                 {
                     "refId": "A",
-                    "expr": "(sum by (request) (loki_nginx_requests_total_by_verb_1m{request=~\"$request\", verb=~\"$verb\", resp_code=~\"3..\"})) > 0",
+                    "expr": "(sum by (request) (loki_nginx_requests_total_by_verb_1m{request=~\"$request\", request=~\".*/api.*\", verb=~\"$verb\", resp_code=~\"3..\"})) > 0",
                     "legendFormat": "{{request}}",
                     "range": true
                 }
@@ -727,7 +727,7 @@
             "targets": [
                 {
                     "refId": "A",
-                    "expr": "(sum by (request) (loki_nginx_requests_total_by_verb_1m{request=~\"$request\", verb=~\"$verb\", resp_code=~\"4..\"})) > 0",
+                    "expr": "(sum by (request) (loki_nginx_requests_total_by_verb_1m{request=~\"$request\", request=~\".*/api.*\", verb=~\"$verb\", resp_code=~\"4..\"})) > 0",
                     "legendFormat": "{{request}}",
                     "range": true
                 }
@@ -789,7 +789,7 @@
             "targets": [
                 {
                     "refId": "A",
-                    "expr": "(sum by (request) (loki_nginx_requests_total_by_verb_1m{request=~\"$request\", verb=~\"$verb\", resp_code=~\"5..\"})) > 0",
+                    "expr": "(sum by (request) (loki_nginx_requests_total_by_verb_1m{request=~\"$request\", request=~\".*/api.*\", verb=~\"$verb\", resp_code=~\"5..\"})) > 0",
                     "legendFormat": "{{request}}",
                     "range": true
                 }

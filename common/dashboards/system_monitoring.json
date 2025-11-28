@@ -885,34 +885,13 @@
                         "mode": "palette-classic"
                     },
                     "custom": {
-                        "axisCenteredZero": false,
-                        "axisColorMode": "text",
                         "axisLabel": "",
                         "axisPlacement": "auto",
-                        "barAlignment": 0,
                         "drawStyle": "line",
                         "fillOpacity": 10,
-                        "gradientMode": "none",
-                        "hideFrom": {
-                            "legend": false,
-                            "tooltip": false,
-                            "viz": false
-                        },
                         "lineInterpolation": "linear",
                         "lineWidth": 1,
-                        "pointSize": 5,
-                        "scaleDistribution": {
-                            "type": "linear"
-                        },
-                        "showPoints": "auto",
-                        "spanNulls": false,
-                        "stacking": {
-                            "group": "A",
-                            "mode": "none"
-                        },
-                        "thresholdsStyle": {
-                            "mode": "off"
-                        }
+                        "spanNulls": false
                     },
                     "mappings": [],
                     "thresholds": {
@@ -921,10 +900,18 @@
                             {
                                 "color": "green",
                                 "value": null
+                            },
+                            {
+                                "color": "#EAB839",
+                                "value": 50
+                            },
+                            {
+                                "color": "red",
+                                "value": 80
                             }
                         ]
                     },
-                    "unit": "none"
+                    "unit": "percent"
                 },
                 "overrides": []
             },
@@ -957,13 +944,13 @@
                         "uid": "prometheus"
                     },
                     "editorMode": "code",
-                    "expr": "sum(rate(container_cpu_usage_seconds_total{stack=~\"$stack\", service=~\"$service\", container=~\"$container\", image!=\"\"}[$__rate_interval])) by (container)",
+                    "expr": "(sum(rate(container_cpu_usage_seconds_total{stack=~\"$stack\", service=~\"$service\", container=~\"$container\", image!=\"\"}[$__rate_interval])) by (container) / scalar(count(count(node_cpu_seconds_total{mode=\"idle\"}) by (cpu)))) * 100",
                     "legendFormat": "{{container}}",
                     "range": true,
                     "refId": "A"
                 }
             ],
-            "title": "CPU Usage per Container (vCPU)",
+            "title": "CPU Usage (% of VPS Total Cores)",
             "type": "timeseries"
         },
         {
@@ -977,34 +964,13 @@
                         "mode": "palette-classic"
                     },
                     "custom": {
-                        "axisCenteredZero": false,
-                        "axisColorMode": "text",
                         "axisLabel": "",
                         "axisPlacement": "auto",
-                        "barAlignment": 0,
                         "drawStyle": "line",
                         "fillOpacity": 10,
-                        "gradientMode": "none",
-                        "hideFrom": {
-                            "legend": false,
-                            "tooltip": false,
-                            "viz": false
-                        },
                         "lineInterpolation": "linear",
                         "lineWidth": 1,
-                        "pointSize": 5,
-                        "scaleDistribution": {
-                            "type": "linear"
-                        },
-                        "showPoints": "auto",
-                        "spanNulls": false,
-                        "stacking": {
-                            "group": "A",
-                            "mode": "none"
-                        },
-                        "thresholdsStyle": {
-                            "mode": "off"
-                        }
+                        "spanNulls": false
                     },
                     "mappings": [],
                     "thresholds": {
@@ -1013,10 +979,18 @@
                             {
                                 "color": "green",
                                 "value": null
+                            },
+                            {
+                                "color": "#EAB839",
+                                "value": 20
+                            },
+                            {
+                                "color": "red",
+                                "value": 50
                             }
                         ]
                     },
-                    "unit": "bytes"
+                    "unit": "percent"
                 },
                 "overrides": []
             },
@@ -1049,13 +1023,13 @@
                         "uid": "prometheus"
                     },
                     "editorMode": "code",
-                    "expr": "sum(container_memory_usage_bytes{stack=~\"$stack\", service=~\"$service\", container=~\"$container\", image!=\"\"}) by (container)",
+                    "expr": "(sum(container_memory_usage_bytes{stack=~\"$stack\", service=~\"$service\", container=~\"$container\", image!=\"\"}) by (container) / scalar(sum(node_memory_MemTotal_bytes))) * 100",
                     "legendFormat": "{{container}}",
                     "range": true,
                     "refId": "A"
                 }
             ],
-            "title": "Memory Usage per Container",
+            "title": "Memory Usage (% of VPS Total RAM)",
             "type": "timeseries"
         },
         {

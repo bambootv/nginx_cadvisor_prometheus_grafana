@@ -250,7 +250,7 @@ loki.process "docker_logs" {
 
   // Parse NGINX access logs (only for nginx container)
   stage.match {
-    selector = "{compose_service=\"monitoring_nginx\"}"
+    selector = "{compose_service=~\"(.*_)?nginx\"}"
 
     stage.regex {
       expression = "^(?P<client>\\S+) (?P<ident>\\S+) (?P<auth>\\S+) \\[(?P<timestamp>[^\\]]+)\\] \"(?P<verb>\\S+) (?P<request>[^\"]+) (?P<httpversion>\\S+)\" (?P<status>\\d+) (?P<response>\\d+) \"(?P<referrer>[^\"]*)\" \"(?P<agent>[^\"]*)\" \"(?P<req_time>\\d+\\.\\d+)\"$"

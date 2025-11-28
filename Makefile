@@ -9,25 +9,25 @@ swarm:
 # ==============================================================================
 # SELF-HOSTED STACK (Prometheus + Loki + Grafana on local)
 # ==============================================================================
-stack_host:
+stack_full_host:
 	COMMON_REPLICAS=1 NGINX_REPLICAS=1 docker stack deploy --detach=false --compose-file docker-compose.selfhost.yml monitoring_host
 
 stack_nginx_host:
 	COMMON_REPLICAS=0 NGINX_REPLICAS=1 docker stack deploy --detach=false --compose-file docker-compose.selfhost.yml monitoring_host
 
-deploy_host:
+deploy_nginx_host:
 	docker service update --force monitoring_host_nginx
 
 # ==============================================================================
 # CLOUD STACK (Grafana Cloud)
 # ==============================================================================
-stack_cloud:
+stack_full_cloud:
 	COMMON_REPLICAS=1 NGINX_REPLICAS=1 docker stack deploy --detach=false --compose-file docker-compose.cloud.yml monitoring_cloud
 
 stack_nginx_cloud:
 	COMMON_REPLICAS=0 NGINX_REPLICAS=1 docker stack deploy --detach=false --compose-file docker-compose.cloud.yml monitoring_cloud
 
-deploy_cloud:
+deploy_nginx_cloud:
 	docker service update --force monitoring_cloud_nginx
 
 apply_rules:

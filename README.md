@@ -70,7 +70,7 @@ Chạy toàn bộ stack monitoring (Prometheus, Loki, Grafana) ngay trên server
 
 2.  **Deploy toàn bộ Stack (Nginx + Monitoring):**
     ```bash
-    make stack_host
+    make stack_full_host
     ```
     *Lệnh này sẽ khởi chạy Nginx, Alloy, Prometheus, Loki và Grafana.*
 
@@ -83,7 +83,7 @@ Chạy toàn bộ stack monitoring (Prometheus, Loki, Grafana) ngay trên server
 4.  **Cập nhật cấu hình Nginx:**
     Sau khi sửa file `nginx.conf` hoặc `nginx_sites_available`, chạy lệnh sau để reload Nginx mà không downtime:
     ```bash
-    make deploy_host
+    make deploy_nginx_host
     ```
 
 ### Truy cập dịch vụ
@@ -123,7 +123,7 @@ Chỉ chạy Nginx và Alloy. Alloy sẽ đẩy metrics và logs lên Grafana Cl
 
 1.  **Deploy Stack (Nginx + Alloy):**
     ```bash
-    make stack_cloud
+    make stack_full_cloud
     ```
 
 2.  **Deploy chỉ Nginx (Không Alloy):**
@@ -133,7 +133,7 @@ Chỉ chạy Nginx và Alloy. Alloy sẽ đẩy metrics và logs lên Grafana Cl
 
 3.  **Cập nhật cấu hình Nginx:**
     ```bash
-    make deploy_cloud
+    make deploy_nginx_cloud
     ```
 
 4.  **Quản lý Rules & Dashboards (Nâng cao):**
@@ -179,13 +179,13 @@ docker stack rm monitoring_cloud
 | :--- | :--- | :--- |
 | `make swarm` | Chung | Khởi tạo Docker Swarm mode. |
 | **Self-hosted** | | |
-| `make stack_host` | Self-host | Deploy toàn bộ stack (Nginx + Monitoring Local). |
+| `make stack_full_host` | Self-host | Deploy toàn bộ stack (Nginx + Monitoring Local). |
 | `make stack_nginx_host` | Self-host | **Chỉ deploy Nginx**, tắt monitoring. |
-| `make deploy_host` | Self-host | Reload service Nginx (Zero downtime). |
+| `make deploy_nginx_host` | Self-host | Reload service Nginx (Zero downtime). |
 | **Grafana Cloud** | | |
-| `make stack_cloud` | Cloud | Deploy stack (Nginx + Alloy đẩy lên Cloud). |
+| `make stack_full_cloud` | Cloud | Deploy stack (Nginx + Alloy đẩy lên Cloud). |
 | `make stack_nginx_cloud` | Cloud | **Chỉ deploy Nginx**, tắt Alloy. |
-| `make deploy_cloud` | Cloud | Reload service Nginx (Zero downtime). |
+| `make deploy_nginx_cloud` | Cloud | Reload service Nginx (Zero downtime). |
 | `make apply_rules` | Cloud | Upload Loki rules lên Grafana Cloud. |
 | `make terraform_apply` | Cloud | Tạo/Cập nhật Dashboards trên Cloud. |
 

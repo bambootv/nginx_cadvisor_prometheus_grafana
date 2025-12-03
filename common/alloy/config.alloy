@@ -33,11 +33,6 @@ prometheus.remote_write "prometheus" {
       action        = "drop"
     }
   }
-
-  external_labels = {
-    cluster = env("CLUSTER_NAME"),
-    env     = env("ENVIRONMENT"),
-  }
 }
 
 // ============================================================================
@@ -138,12 +133,6 @@ prometheus.relabel "cadvisor" {
     source_labels = ["__name__"]
     regex         = "container_tasks_state|container_memory_failures_total|container_ulimits_soft"
     action        = "drop"
-  }
-
-  // Drop container labels we don't need (reduce cardinality)
-  rule {
-    regex  = "container_label_(?!com_docker_(compose|swarm|stack)).*"
-    action = "labeldrop"
   }
 
   // Drop id label (high cardinality, container name is enough)
@@ -314,7 +303,7 @@ loki.process "docker_logs" {
     stage.replace {
       source     = "request_path"
       expression = "/\\d+(/|$)"
-      replace    = "/:id$1"
+      replace    = "/:id"
     }
 
     // 3. Normalize UUIDs (Thêm hỗ trợ chữ Hoa A-F cho chắc ăn)
@@ -402,18 +391,6 @@ loki.write "loki" {
       username = env("GRAFANA_CLOUD_LOKI_USER")
       password = env("GRAFANA_CLOUD_API_KEY")
     }
-
-    // Batch config for better throughput
-    batch_wait    = "1s"
-    batch_size    = 1048576  // 1MB
-    min_backoff   = "500ms"
-    max_backoff   = "5m"
-    max_retries   = 10
-  }
-
-  external_labels = {
-    cluster = env("CLUSTER_NAME"),
-    env     = env("ENVIRONMENT"),
   }
 }
 

@@ -378,7 +378,7 @@
         {
             "id": 106,
             "type": "timeseries",
-            "title": "Request Volume by API - Top $topk (1m)",
+            "title": "Request Volume by API - Top $topk",
             "gridPos": {
                 "h": 8,
                 "w": 12,
@@ -438,7 +438,7 @@
         {
             "id": 107,
             "type": "timeseries",
-            "title": "2xx Response Volume - Top $topk (1m)",
+            "title": "2xx Response Volume - Top $topk",
             "gridPos": {
                 "h": 8,
                 "w": 12,
@@ -501,7 +501,7 @@
         {
             "id": 108,
             "type": "timeseries",
-            "title": "3xx Response Volume - Top $topk (1m)",
+            "title": "3xx Response Volume - Top $topk",
             "gridPos": {
                 "h": 8,
                 "w": 12,
@@ -564,7 +564,7 @@
         {
             "id": 109,
             "type": "timeseries",
-            "title": "4xx Response Volume - Top $topk (1m)",
+            "title": "4xx Response Volume - Top $topk",
             "gridPos": {
                 "h": 8,
                 "w": 12,
@@ -627,7 +627,7 @@
         {
             "id": 110,
             "type": "timeseries",
-            "title": "5xx Response Volume - Top $topk (1m)",
+            "title": "5xx Response Volume - Top $topk",
             "gridPos": {
                 "h": 8,
                 "w": 12,

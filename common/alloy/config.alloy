@@ -11,15 +11,32 @@ prometheus.remote_write "prometheus" {
     url = env("GRAFANA_CLOUD_PROM_URL")
 
     queue_config {
-      capacity             = 10000
+      capacity             = 15000
       max_shards           = 10
       max_samples_per_send = 5000
+      batch_send_deadline  = "5s"
+      min_backoff          = "30ms"
+      max_backoff          = "5s"
+      retry_on_http_429    = true
     }
 
     basic_auth {
       username = env("GRAFANA_CLOUD_PROM_USER")
       password = env("GRAFANA_CLOUD_API_KEY")
     }
+
+    // Write-Ahead-Log for reliability
+    write_relabel_config {
+      // Drop go_* metrics (too detailed, use summary instead)
+      source_labels = ["__name__"]
+      regex         = "go_(gc|memstats)_.*"
+      action        = "drop"
+    }
+  }
+
+  external_labels = {
+    cluster = env("CLUSTER_NAME"),
+    env     = env("ENVIRONMENT"),
   }
 }
 
@@ -33,13 +50,11 @@ prometheus.exporter.unix "system" {
 
   enable_collectors = [
     "cpu",
-    "cpufreq",
     "diskstats",
     "filesystem",
     "loadavg",
     "meminfo",
     "netdev",
-    "netstat",
     "stat",
     "time",
     "uname",
@@ -113,6 +128,28 @@ prometheus.relabel "cadvisor" {
   rule {
     source_labels = ["container_label_com_docker_compose_project"]
     target_label  = "project"
+  }
+
+  // ==========================================================================
+  // DROP HIGH-CARDINALITY & UNUSED METRICS (Reduce storage cost)
+  // ==========================================================================
+  // Drop metrics with high cardinality labels we don't need
+  rule {
+    source_labels = ["__name__"]
+    regex         = "container_tasks_state|container_memory_failures_total|container_ulimits_soft"
+    action        = "drop"
+  }
+
+  // Drop container labels we don't need (reduce cardinality)
+  rule {
+    regex  = "container_label_(?!com_docker_(compose|swarm|stack)).*"
+    action = "labeldrop"
+  }
+
+  // Drop id label (high cardinality, container name is enough)
+  rule {
+    regex  = "^id$"
+    action = "labeldrop"
   }
 }
 
@@ -267,17 +304,55 @@ loki.process "docker_logs" {
       template = "{{ if .geoip_country_name }}{{ .geoip_country_name }}{{ else }}Other{{ end }}"
     }
 
-    // Extract request path (before query string)
+// 1. Extract request path
     stage.regex {
       source     = "request"
       expression = "^(?P<request_path>[^?]+)"
     }
 
+    // 2. Normalize Numeric IDs (Giữ nguyên - Rất tốt)
+    stage.replace {
+      source     = "request_path"
+      expression = "/\\d+(/|$)"
+      replace    = "/:id$1"
+    }
+
+    // 3. Normalize UUIDs (Thêm hỗ trợ chữ Hoa A-F cho chắc ăn)
+    stage.replace {
+      source     = "request_path"
+      // Thêm A-F để bắt cả UUID viết hoa
+      expression = "/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}"
+      replace    = "/:uuid"
+    }
+
+    // 4. Normalize Hashes (Thêm A-F)
+    stage.replace {
+      source     = "request_path"
+      expression = "/[0-9a-fA-F]{32,}"
+      replace    = "/:hash"
+    }
+
+    // 5. (TÙY CHỌN) Catch-all cho Slug nếu sợ bị spam URL rác
+    // Nếu path segment quá dài (> 50 ký tự) mà không phải số/uuid -> coi là :slug
+    stage.replace {
+      source     = "request_path"
+      expression = "/[^/]{50,}"
+      replace    = "/:slug_long"
+    }
+
+    // 6. Status Category (Giữ nguyên - Rất hay)
+    stage.template {
+      source   = "status_category"
+      template = "{{ if ge (atoi .status) 500 }}5xx{{ else if ge (atoi .status) 400 }}4xx{{ else if ge (atoi .status) 300 }}3xx{{ else }}2xx{{ end }}"
+    }
+
+    // 7. Labels
     stage.labels {
       values = {
         verb         = "verb",
         request      = "request_path",
         resp_code    = "status",
+        status_cat   = "status_category",
         country_name = "final_country_name",
       }
     }
@@ -294,7 +369,7 @@ loki.process "docker_logs" {
         description = "Distribution of NGINX request processing times, from logs."
         source      = "req_time"
         prefix      = ""
-        buckets     = [0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10]
+        buckets     = [0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10]
       }
     }
   }
@@ -327,6 +402,18 @@ loki.write "loki" {
       username = env("GRAFANA_CLOUD_LOKI_USER")
       password = env("GRAFANA_CLOUD_API_KEY")
     }
+
+    // Batch config for better throughput
+    batch_wait    = "1s"
+    batch_size    = 1048576  // 1MB
+    min_backoff   = "500ms"
+    max_backoff   = "5m"
+    max_retries   = 10
+  }
+
+  external_labels = {
+    cluster = env("CLUSTER_NAME"),
+    env     = env("ENVIRONMENT"),
   }
 }
 

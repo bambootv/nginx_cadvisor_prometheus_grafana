@@ -275,7 +275,7 @@
                             "tooltip": false,
                             "viz": false
                         },
-                        "lineInterpolation": "linear",
+                        "lineInterpolation": "smooth",
                         "lineWidth": 2,
                         "pointSize": 5,
                         "scaleDistribution": {
@@ -891,7 +891,7 @@
                         "axisPlacement": "auto",
                         "drawStyle": "line",
                         "fillOpacity": 10,
-                        "lineInterpolation": "linear",
+                        "lineInterpolation": "smooth",
                         "lineWidth": 1,
                         "spanNulls": false
                     },
@@ -970,7 +970,7 @@
                         "axisPlacement": "auto",
                         "drawStyle": "line",
                         "fillOpacity": 10,
-                        "lineInterpolation": "linear",
+                        "lineInterpolation": "smooth",
                         "lineWidth": 1,
                         "spanNulls": false
                     },
@@ -1071,7 +1071,7 @@
                             "tooltip": false,
                             "viz": false
                         },
-                        "lineInterpolation": "linear",
+                        "lineInterpolation": "smooth",
                         "lineWidth": 1,
                         "pointSize": 5,
                         "scaleDistribution": {
@@ -1174,7 +1174,7 @@
                             "tooltip": false,
                             "viz": false
                         },
-                        "lineInterpolation": "linear",
+                        "lineInterpolation": "smooth",
                         "lineWidth": 1,
                         "pointSize": 5,
                         "scaleDistribution": {

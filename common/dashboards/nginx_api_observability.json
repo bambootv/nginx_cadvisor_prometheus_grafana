@@ -1169,17 +1169,31 @@
                 },
                 {
                     "refId": "B",
-                    "expr": "sum by (country_name) (sum_over_time(loki_nginx_requests_total_by_country{resp_code=~\"4..|5..\"}[$__range]))",
+                    "expr": "sum by (country_name) (sum_over_time(loki_nginx_requests_total_by_country{resp_code=~\"2..\"}[$__range]))",
                     "format": "table",
                     "instant": true,
-                    "legendFormat": "All Errors (4xx+5xx)"
+                    "legendFormat": "Success (2xx)"
                 },
                 {
                     "refId": "C",
+                    "expr": "sum by (country_name) (sum_over_time(loki_nginx_requests_total_by_country{resp_code=~\"3..\"}[$__range]))",
+                    "format": "table",
+                    "instant": true,
+                    "legendFormat": "Redirect (3xx)"
+                },
+                {
+                    "refId": "D",
+                    "expr": "sum by (country_name) (sum_over_time(loki_nginx_requests_total_by_country{resp_code=~\"4..\"}[$__range]))",
+                    "format": "table",
+                    "instant": true,
+                    "legendFormat": "Client Error (4xx)"
+                },
+                {
+                    "refId": "E",
                     "expr": "sum by (country_name) (sum_over_time(loki_nginx_requests_total_by_country{resp_code=~\"5..\"}[$__range]))",
                     "format": "table",
                     "instant": true,
-                    "legendFormat": "Critical (5xx)"
+                    "legendFormat": "Server Error (5xx)"
                 }
             ],
             "transformations": [
@@ -1199,14 +1213,18 @@
                         "indexByName": {
                             "country_name": 0,
                             "Total Requests": 1,
-                            "All Errors (4xx+5xx)": 2,
-                            "Critical (5xx)": 3
+                            "Success (2xx)": 2,
+                            "Redirect (3xx)": 3,
+                            "Client Error (4xx)": 4,
+                            "Server Error (5xx)": 5
                         },
                         "renameByName": {
                             "country_name": "Country",
                             "Value #A": "Total Requests",
-                            "Value #B": "All Errors (4xx+5xx)",
-                            "Value #C": "Critical (5xx)"
+                            "Value #B": "Success (2xx)",
+                            "Value #C": "Redirect (3xx)",
+                            "Value #D": "Client Error (4xx)",
+                            "Value #E": "Server Error (5xx)"
                         }
                     }
                 },
@@ -1270,30 +1288,7 @@
                     {
                         "matcher": {
                             "id": "byName",
-                            "options": "All Errors (4xx+5xx)"
-                        },
-                        "properties": [
-                            {
-                                "id": "custom.displayMode",
-                                "value": "lcd-gauge"
-                            },
-                            {
-                                "id": "color",
-                                "value": {
-                                    "mode": "fixed",
-                                    "fixedColor": "orange"
-                                }
-                            },
-                            {
-                                "id": "unit",
-                                "value": "short"
-                            }
-                        ]
-                    },
-                    {
-                        "matcher": {
-                            "id": "byName",
-                            "options": "Critical (5xx)"
+                            "options": "Server Error (5xx)"
                         },
                         "properties": [
                             {
@@ -1320,6 +1315,75 @@
                                             "value": 1
                                         }
                                     ]
+                                }
+                            },
+                            {
+                                "id": "unit",
+                                "value": "short"
+                            }
+                        ]
+                    },
+                    {
+                        "matcher": {
+                            "id": "byName",
+                            "options": "Success (2xx)"
+                        },
+                        "properties": [
+                            {
+                                "id": "custom.displayMode",
+                                "value": "gradient-gauge"
+                            },
+                            {
+                                "id": "color",
+                                "value": {
+                                    "mode": "fixed",
+                                    "fixedColor": "green"
+                                }
+                            },
+                            {
+                                "id": "unit",
+                                "value": "short"
+                            }
+                        ]
+                    },
+                    {
+                        "matcher": {
+                            "id": "byName",
+                            "options": "Redirect (3xx)"
+                        },
+                        "properties": [
+                            {
+                                "id": "custom.displayMode",
+                                "value": "gradient-gauge"
+                            },
+                            {
+                                "id": "color",
+                                "value": {
+                                    "mode": "fixed",
+                                    "fixedColor": "yellow"
+                                }
+                            },
+                            {
+                                "id": "unit",
+                                "value": "short"
+                            }
+                        ]
+                    },
+                    {
+                        "matcher": {
+                            "id": "byName",
+                            "options": "Client Error (4xx)"
+                        },
+                        "properties": [
+                            {
+                                "id": "custom.displayMode",
+                                "value": "lcd-gauge"
+                            },
+                            {
+                                "id": "color",
+                                "value": {
+                                    "mode": "fixed",
+                                    "fixedColor": "orange"
                                 }
                             },
                             {

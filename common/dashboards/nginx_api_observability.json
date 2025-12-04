@@ -24,7 +24,7 @@
     "panels": [
         {
             "type": "row",
-            "title": "I. Survival Cockpit",
+            "title": "I. Overview",
             "gridPos": {
                 "h": 1,
                 "w": 24,
@@ -52,13 +52,13 @@
             "targets": [
                 {
                     "refId": "A",
-                    "expr": "sum(loki_nginx_requests_rate_by_verb{request=~\"$request\", verb=~\"$verb\", resp_code=~\"$resp_code\"})",
+                    "expr": "sum(loki_nginx_requests_rate_by_verb{verb=~\"$verb\", resp_code=~\"$resp_code\"})",
                     "legendFormat": "Current Speed",
                     "range": true
                 },
                 {
                     "refId": "B",
-                    "expr": "sum(sum_over_time(loki_nginx_requests_total_by_verb_15s{request=~\"$request\", verb=~\"$verb\", resp_code=~\"$resp_code\"}[$__range]))",
+                    "expr": "sum(sum_over_time(loki_nginx_requests_total_by_verb_15s{verb=~\"$verb\", resp_code=~\"$resp_code\"}[$__range]))",
                     "legendFormat": "Total Requests",
                     "range": true
                 }
@@ -147,7 +147,7 @@
             "targets": [
                 {
                     "refId": "A",
-                    "expr": "(sum(sum_over_time(loki_nginx_requests_total_by_verb_15s{resp_code=~\"5..\", request=~\"$request\", verb=~\"$verb\"}[$__range])) / clamp_min(sum(sum_over_time(loki_nginx_requests_total_by_verb_15s{request=~\"$request\", verb=~\"$verb\", resp_code=~\"$resp_code\"}[$__range])), 1)) * 100",
+                    "expr": "(sum(sum_over_time(loki_nginx_requests_total_by_verb_15s{resp_code=~\"5..\", verb=~\"$verb\"}[$__range])) / clamp_min(sum(sum_over_time(loki_nginx_requests_total_by_verb_15s{verb=~\"$verb\", resp_code=~\"$resp_code\"}[$__range])), 1)) * 100",
                     "range": false
                 }
             ],
@@ -207,7 +207,7 @@
             "targets": [
                 {
                     "refId": "A",
-                    "expr": "histogram_quantile(0.95, sum by (le) (increase(loki_process_custom_nginxlog_request_duration_seconds_bucket{request=~\"$request\", verb=~\"$verb\", resp_code=~\"$resp_code\"}[$__range])))",
+                    "expr": "histogram_quantile(0.95, sum by (le) (increase(loki_process_custom_nginxlog_request_duration_seconds_bucket{verb=~\"$verb\", resp_code=~\"$resp_code\"}[$__range])))",
                     "range": false
                 }
             ],
@@ -262,7 +262,7 @@
             "targets": [
                 {
                     "refId": "A",
-                    "expr": "histogram_quantile(0.99, sum by (le) (increase(loki_process_custom_nginxlog_request_duration_seconds_bucket{request=~\"$request\", verb=~\"$verb\", resp_code=~\"$resp_code\"}[$__range])))",
+                    "expr": "histogram_quantile(0.99, sum by (le) (increase(loki_process_custom_nginxlog_request_duration_seconds_bucket{verb=~\"$verb\", resp_code=~\"$resp_code\"}[$__range])))",
                     "range": false
                 }
             ],
@@ -301,13 +301,400 @@
             }
         },
         {
+            "id": 105,
+            "type": "timeseries",
+            "title": "Total Requests Per Second (req/s)",
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 0,
+                "y": 5
+            },
+            "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+            },
+            "targets": [
+                {
+                    "refId": "A",
+                    "expr": "sum(loki_nginx_requests_rate_by_verb{verb=~\"$verb\", resp_code=~\"$resp_code\"})",
+                    "legendFormat": "Total req/s",
+                    "range": true
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "reqps",
+                    "custom": {
+                        "lineInterpolation": "smooth",
+                        "drawStyle": "line",
+                        "lineWidth": 2,
+                        "fillOpacity": 20,
+                        "gradientMode": "opacity",
+                        "spanNulls": true,
+                        "showPoints": "auto",
+                        "pointSize": 5,
+                        "stacking": {
+                            "mode": "none",
+                            "group": "A"
+                        },
+                        "axisPlacement": "auto",
+                        "barAlignment": 0,
+                        "scaleDistribution": {
+                            "type": "linear"
+                        }
+                    },
+                    "color": {
+                        "mode": "palette-classic"
+                    },
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            }
+                        ]
+                    }
+                },
+                "overrides": []
+            },
+            "options": {
+                "legend": {
+                    "displayMode": "list",
+                    "placement": "bottom",
+                    "calcs": [
+                        "mean",
+                        "max",
+                        "last"
+                    ]
+                },
+                "tooltip": {
+                    "mode": "multi",
+                    "sort": "desc"
+                }
+            }
+        },
+        {
+            "id": 106,
+            "type": "timeseries",
+            "title": "Request CounterCounter",
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 12,
+                "y": 5
+            },
+            "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+            },
+            "targets": [
+                {
+                    "refId": "A",
+                    "expr": "(sum by (request) (loki_nginx_requests_total_by_verb_1m{request=~\".*/api.*\", verb=~\"$verb\", resp_code=~\"$resp_code\"})) > 0 and on(request) (topk($topk, sum by (request) (sum_over_time(loki_nginx_requests_total_by_verb_1m{request=~\".*/api.*\", verb=~\"$verb\", resp_code=~\"$resp_code\"}[$__range]))))",
+                    "legendFormat": "{{request}}",
+                    "range": true
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "short",
+                    "custom": {
+                        "lineInterpolation": "smooth",
+                        "drawStyle": "line",
+                        "lineWidth": 1,
+                        "fillOpacity": 0,
+                        "gradientMode": "none",
+                        "spanNulls": true,
+                        "showPoints": "auto",
+                        "pointSize": 5,
+                        "stacking": {
+                            "mode": "none",
+                            "group": "A"
+                        },
+                        "axisPlacement": "auto",
+                        "barAlignment": 0,
+                        "scaleDistribution": {
+                            "type": "linear"
+                        }
+                    }
+                },
+                "overrides": []
+            },
+            "options": {
+                "legend": {
+                    "displayMode": "table",
+                    "placement": "right",
+                    "calcs": [],
+                    "width": 250
+                },
+                "tooltip": {
+                    "mode": "multi",
+                    "sort": "desc"
+                }
+            }
+        },
+        {
+            "id": 107,
+            "type": "timeseries",
+            "title": "Request Counter 2xx (Top $topk)",
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 0,
+                "y": 13
+            },
+            "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+            },
+            "targets": [
+                {
+                    "refId": "A",
+                    "expr": "(sum by (request) (loki_nginx_requests_total_by_verb_1m{request=~\".*/api.*\", verb=~\"$verb\", resp_code=~\"2..\"})) > 0 and on(request) (topk($topk, sum by (request) (sum_over_time(loki_nginx_requests_total_by_verb_1m{request=~\".*/api.*\", verb=~\"$verb\", resp_code=~\"2..\"}[$__range]))))",
+                    "legendFormat": "{{request}}",
+                    "range": true
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "short",
+                    "custom": {
+                        "lineInterpolation": "smooth",
+                        "drawStyle": "line",
+                        "lineWidth": 1,
+                        "fillOpacity": 10,
+                        "gradientMode": "none",
+                        "spanNulls": true,
+                        "showPoints": "auto",
+                        "pointSize": 5,
+                        "stacking": {
+                            "mode": "none",
+                            "group": "A"
+                        },
+                        "axisPlacement": "auto",
+                        "barAlignment": 0,
+                        "scaleDistribution": {
+                            "type": "linear"
+                        }
+                    },
+                    "color": {
+                        "mode": "palette-classic"
+                    }
+                },
+                "overrides": []
+            },
+            "options": {
+                "legend": {
+                    "displayMode": "table",
+                    "placement": "right",
+                    "calcs": [],
+                    "width": 250
+                },
+                "tooltip": {
+                    "mode": "multi",
+                    "sort": "desc"
+                }
+            }
+        },
+        {
+            "id": 108,
+            "type": "timeseries",
+            "title": "Request Counter 3xx (Top $topk)",
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 12,
+                "y": 13
+            },
+            "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+            },
+            "targets": [
+                {
+                    "refId": "A",
+                    "expr": "(sum by (request) (loki_nginx_requests_total_by_verb_1m{request=~\".*/api.*\", verb=~\"$verb\", resp_code=~\"3..\"})) > 0 and on(request) (topk($topk, sum by (request) (sum_over_time(loki_nginx_requests_total_by_verb_1m{request=~\".*/api.*\", verb=~\"$verb\", resp_code=~\"3..\"}[$__range]))))",
+                    "legendFormat": "{{request}}",
+                    "range": true
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "short",
+                    "custom": {
+                        "lineInterpolation": "smooth",
+                        "drawStyle": "line",
+                        "lineWidth": 1,
+                        "fillOpacity": 10,
+                        "gradientMode": "none",
+                        "spanNulls": true,
+                        "showPoints": "auto",
+                        "pointSize": 5,
+                        "stacking": {
+                            "mode": "none",
+                            "group": "A"
+                        },
+                        "axisPlacement": "auto",
+                        "barAlignment": 0,
+                        "scaleDistribution": {
+                            "type": "linear"
+                        }
+                    },
+                    "color": {
+                        "mode": "palette-classic"
+                    }
+                },
+                "overrides": []
+            },
+            "options": {
+                "legend": {
+                    "displayMode": "table",
+                    "placement": "right",
+                    "calcs": [],
+                    "width": 250
+                },
+                "tooltip": {
+                    "mode": "multi",
+                    "sort": "desc"
+                }
+            }
+        },
+        {
+            "id": 109,
+            "type": "timeseries",
+            "title": "Request Counter 4xx (Top $topk)",
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 0,
+                "y": 21
+            },
+            "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+            },
+            "targets": [
+                {
+                    "refId": "A",
+                    "expr": "(sum by (request) (loki_nginx_requests_total_by_verb_1m{request=~\".*/api.*\", verb=~\"$verb\", resp_code=~\"4..\"})) > 0 and on(request) (topk($topk, sum by (request) (sum_over_time(loki_nginx_requests_total_by_verb_1m{request=~\".*/api.*\", verb=~\"$verb\", resp_code=~\"4..\"}[$__range]))))",
+                    "legendFormat": "{{request}}",
+                    "range": true
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "short",
+                    "custom": {
+                        "lineInterpolation": "smooth",
+                        "drawStyle": "line",
+                        "lineWidth": 1,
+                        "fillOpacity": 10,
+                        "gradientMode": "none",
+                        "spanNulls": true,
+                        "showPoints": "auto",
+                        "pointSize": 5,
+                        "stacking": {
+                            "mode": "none",
+                            "group": "A"
+                        },
+                        "axisPlacement": "auto",
+                        "barAlignment": 0,
+                        "scaleDistribution": {
+                            "type": "linear"
+                        }
+                    },
+                    "color": {
+                        "mode": "palette-classic"
+                    }
+                },
+                "overrides": []
+            },
+            "options": {
+                "legend": {
+                    "displayMode": "table",
+                    "placement": "right",
+                    "calcs": [],
+                    "width": 250
+                },
+                "tooltip": {
+                    "mode": "multi",
+                    "sort": "desc"
+                }
+            }
+        },
+        {
+            "id": 110,
+            "type": "timeseries",
+            "title": "Request Counter 5xx (Top $topk)",
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 12,
+                "y": 21
+            },
+            "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+            },
+            "targets": [
+                {
+                    "refId": "A",
+                    "expr": "(sum by (request) (loki_nginx_requests_total_by_verb_1m{request=~\".*/api.*\", verb=~\"$verb\", resp_code=~\"5..\"})) > 0 and on(request) (topk($topk, sum by (request) (sum_over_time(loki_nginx_requests_total_by_verb_1m{request=~\".*/api.*\", verb=~\"$verb\", resp_code=~\"5..\"}[$__range]))))",
+                    "legendFormat": "{{request}}",
+                    "range": true
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "short",
+                    "custom": {
+                        "lineInterpolation": "smooth",
+                        "drawStyle": "line",
+                        "lineWidth": 1,
+                        "fillOpacity": 10,
+                        "gradientMode": "none",
+                        "spanNulls": true,
+                        "showPoints": "auto",
+                        "pointSize": 5,
+                        "stacking": {
+                            "mode": "none",
+                            "group": "A"
+                        },
+                        "axisPlacement": "auto",
+                        "barAlignment": 0,
+                        "scaleDistribution": {
+                            "type": "linear"
+                        }
+                    },
+                    "color": {
+                        "mode": "palette-classic"
+                    }
+                },
+                "overrides": []
+            },
+            "options": {
+                "legend": {
+                    "displayMode": "table",
+                    "placement": "right",
+                    "calcs": [],
+                    "width": 250
+                },
+                "tooltip": {
+                    "mode": "multi",
+                    "sort": "desc"
+                }
+            }
+        },
+        {
             "type": "row",
-            "title": "II. War Room",
+            "title": "II. TOP 10 Analysis",
             "gridPos": {
                 "h": 1,
                 "w": 24,
                 "x": 0,
-                "y": 5
+                "y": 29
             },
             "id": 200,
             "collapsed": false,
@@ -321,7 +708,7 @@
                 "h": 9,
                 "w": 12,
                 "x": 0,
-                "y": 6
+                "y": 30
             },
             "datasource": {
                 "type": "prometheus",
@@ -330,7 +717,7 @@
             "targets": [
                 {
                     "refId": "A",
-                    "expr": "topk(10, sum by (request, verb) (sum_over_time(loki_nginx_requests_total_by_verb_15s{resp_code=~\"$resp_code\", request=~\"$request\", verb=~\"$verb\"}[$__range])))",
+                    "expr": "topk(10, sum by (request, verb) (sum_over_time(loki_nginx_requests_total_by_verb_15s{resp_code=~\"$resp_code\", verb=~\"$verb\"}[$__range])))",
                     "format": "table",
                     "instant": true
                 }
@@ -339,13 +726,44 @@
                 {
                     "id": "labelsToFields",
                     "options": {}
+                },
+                {
+                    "id": "calculateField",
+                    "options": {
+                        "alias": "_idx",
+                        "mode": "index"
+                    }
+                },
+                {
+                    "id": "calculateField",
+                    "options": {
+                        "alias": "No.",
+                        "mode": "binary",
+                        "binary": {
+                            "left": "_idx",
+                            "operator": "+",
+                            "right": "1"
+                        }
+                    }
+                },
+                {
+                    "id": "organize",
+                    "options": {
+                        "excludeByName": {
+                            "Time": true,
+                            "_idx": true
+                        },
+                        "indexByName": {
+                            "No.": 0
+                        }
+                    }
                 }
             ],
             "fieldConfig": {
                 "defaults": {
                     "unit": "short",
                     "custom": {
-                        "align": "auto"
+                        "align": "center"
                     }
                 },
                 "overrides": []
@@ -363,12 +781,12 @@
         {
             "id": 202,
             "type": "table",
-            "title": "Top 10 Server Error APIs (5xx, Range)",
+            "title": "Top 10 Slow APIs (P95, Range)",
             "gridPos": {
                 "h": 9,
                 "w": 12,
                 "x": 12,
-                "y": 6
+                "y": 30
             },
             "datasource": {
                 "type": "prometheus",
@@ -377,7 +795,7 @@
             "targets": [
                 {
                     "refId": "A",
-                    "expr": "topk(10, sum by (request, verb, resp_code) (sum_over_time(loki_nginx_requests_total_by_verb_15s{resp_code=~\"5..\", request=~\"$request\", verb=~\"$verb\"}[$__range])))",
+                    "expr": "topk(10, histogram_quantile(0.95, sum by (le, request, verb) (increase(loki_process_custom_nginxlog_request_duration_seconds_bucket{verb=~\"$verb\", resp_code=~\"$resp_code\"}[$__range])))>=0)",
                     "format": "table",
                     "instant": true,
                     "range": false
@@ -386,28 +804,64 @@
             "transformations": [
                 {
                     "id": "labelsToFields",
+                    "options": {}
+                },
+                {
+                    "id": "calculateField",
                     "options": {
-                        "valueLabel": "Value"
+                        "alias": "_idx",
+                        "mode": "index"
+                    }
+                },
+                {
+                    "id": "calculateField",
+                    "options": {
+                        "alias": "No.",
+                        "mode": "binary",
+                        "binary": {
+                            "left": "_idx",
+                            "operator": "+",
+                            "right": "1"
+                        }
+                    }
+                },
+                {
+                    "id": "organize",
+                    "options": {
+                        "excludeByName": {
+                            "Time": true,
+                            "_idx": true
+                        },
+                        "indexByName": {
+                            "No.": 0
+                        }
                     }
                 }
             ],
             "fieldConfig": {
                 "defaults": {
+                    "unit": "none",
                     "custom": {
-                        "align": "left"
-                    },
-                    "unit": "short"
+                        "align": "center"
+                    }
                 },
-                "overrides": []
-            },
-            "options": {
-                "showHeader": true,
-                "sortBy": [
+                "overrides": [
                     {
-                        "displayName": "Value",
-                        "desc": true
+                        "matcher": {
+                            "id": "byName",
+                            "options": "Value"
+                        },
+                        "properties": [
+                            {
+                                "id": "unit",
+                                "value": "s"
+                            }
+                        ]
                     }
                 ]
+            },
+            "options": {
+                "showHeader": true
             }
         },
         {
@@ -418,7 +872,7 @@
                 "h": 9,
                 "w": 12,
                 "x": 0,
-                "y": 15
+                "y": 39
             },
             "datasource": {
                 "type": "prometheus",
@@ -427,7 +881,7 @@
             "targets": [
                 {
                     "refId": "A",
-                    "expr": "topk(10, sum by (request, verb, resp_code) (sum_over_time(loki_nginx_requests_total_by_verb_15s{resp_code=~\"4..\", request=~\"$request\", verb=~\"$verb\"}[$__range])))",
+                    "expr": "topk(10, sum by (request, verb, resp_code) (sum_over_time(loki_nginx_requests_total_by_verb_15s{resp_code=~\"4..\", verb=~\"$verb\"}[$__range])))",
                     "format": "table",
                     "instant": true,
                     "range": false
@@ -436,15 +890,44 @@
             "transformations": [
                 {
                     "id": "labelsToFields",
+                    "options": {}
+                },
+                {
+                    "id": "calculateField",
                     "options": {
-                        "valueLabel": "Value"
+                        "alias": "_idx",
+                        "mode": "index"
+                    }
+                },
+                {
+                    "id": "calculateField",
+                    "options": {
+                        "alias": "No.",
+                        "mode": "binary",
+                        "binary": {
+                            "left": "_idx",
+                            "operator": "+",
+                            "right": "1"
+                        }
+                    }
+                },
+                {
+                    "id": "organize",
+                    "options": {
+                        "excludeByName": {
+                            "Time": true,
+                            "_idx": true
+                        },
+                        "indexByName": {
+                            "No.": 0
+                        }
                     }
                 }
             ],
             "fieldConfig": {
                 "defaults": {
                     "custom": {
-                        "align": "left"
+                        "align": "center"
                     },
                     "unit": "short"
                 },
@@ -463,12 +946,12 @@
         {
             "id": 204,
             "type": "table",
-            "title": "Top 10 Slow APIs (P95, Range)",
+            "title": "Top 10 Server Error APIs (5xx, Range)",
             "gridPos": {
                 "h": 9,
                 "w": 12,
                 "x": 12,
-                "y": 15
+                "y": 39
             },
             "datasource": {
                 "type": "prometheus",
@@ -477,473 +960,76 @@
             "targets": [
                 {
                     "refId": "A",
-                    "expr": "topk(10, histogram_quantile(0.95, sum by (le, request, verb) (increase(loki_process_custom_nginxlog_request_duration_seconds_bucket{request=~\"$request\", verb=~\"$verb\", resp_code=~\"$resp_code\"}[$__range])))>=0)",
+                    "expr": "topk(10, sum by (request, verb, resp_code) (sum_over_time(loki_nginx_requests_total_by_verb_15s{resp_code=~\"5..\", verb=~\"$verb\"}[$__range])))",
                     "format": "table",
                     "instant": true,
                     "range": false
                 }
             ],
+            "transformations": [
+                {
+                    "id": "labelsToFields",
+                    "options": {}
+                },
+                {
+                    "id": "calculateField",
+                    "options": {
+                        "alias": "_idx",
+                        "mode": "index"
+                    }
+                },
+                {
+                    "id": "calculateField",
+                    "options": {
+                        "alias": "No.",
+                        "mode": "binary",
+                        "binary": {
+                            "left": "_idx",
+                            "operator": "+",
+                            "right": "1"
+                        }
+                    }
+                },
+                {
+                    "id": "organize",
+                    "options": {
+                        "excludeByName": {
+                            "Time": true,
+                            "_idx": true
+                        },
+                        "indexByName": {
+                            "No.": 0
+                        }
+                    }
+                }
+            ],
             "fieldConfig": {
                 "defaults": {
-                    "unit": "s",
                     "custom": {
                         "align": "center"
-                    }
+                    },
+                    "unit": "short"
                 },
                 "overrides": []
             },
             "options": {
-                "showHeader": true
+                "showHeader": true,
+                "sortBy": [
+                    {
+                        "displayName": "Value",
+                        "desc": true
+                    }
+                ]
             }
         },
         {
             "type": "row",
-            "title": "III. Trends",
+            "title": "III. Geo Distribution",
             "gridPos": {
                 "h": 1,
                 "w": 24,
                 "x": 0,
-                "y": 24
-            },
-            "id": 300,
-            "collapsed": false,
-            "panels": []
-        },
-        {
-            "id": 301,
-            "type": "timeseries",
-            "title": "Request Volume by API (1m)",
-            "gridPos": {
-                "h": 9,
-                "w": 12,
-                "x": 0,
-                "y": 25
-            },
-            "datasource": {
-                "type": "prometheus",
-                "uid": "prometheus"
-            },
-            "targets": [
-                {
-                    "refId": "A",
-                    "expr": "(sum by (request) (loki_nginx_requests_total_by_verb_1m{request=~\"$request\", request=~\".*/api.*\", verb=~\"$verb\", resp_code=~\"$resp_code\"})) > 0",
-                    "legendFormat": "{{request}}",
-                    "range": true
-                }
-            ],
-            "fieldConfig": {
-                "defaults": {
-                    "unit": "short",
-                    "custom": {
-                        "lineInterpolation": "stepAfter",
-                        "drawStyle": "line",
-                        "lineWidth": 1,
-                        "fillOpacity": 0,
-                        "gradientMode": "none",
-                        "spanNulls": false,
-                        "showPoints": "auto",
-                        "pointSize": 5,
-                        "stacking": {
-                            "mode": "none",
-                            "group": "A"
-                        },
-                        "axisPlacement": "auto",
-                        "barAlignment": 0,
-                        "scaleDistribution": {
-                            "type": "linear"
-                        }
-                    }
-                },
-                "overrides": []
-            },
-            "options": {
-                "legend": {
-                    "displayMode": "table",
-                    "placement": "right",
-                    "calcs": [],
-                    "width": 250
-                },
-                "tooltip": {
-                    "mode": "multi",
-                    "sort": "desc"
-                }
-            }
-        },
-        {
-            "id": 302,
-            "type": "timeseries",
-            "title": "Request Volume by Verb (1m)",
-            "gridPos": {
-                "h": 9,
-                "w": 12,
-                "x": 12,
-                "y": 25
-            },
-            "datasource": {
-                "type": "prometheus",
-                "uid": "prometheus"
-            },
-            "targets": [
-                {
-                    "refId": "A",
-                    "expr": "(sum by (verb) (loki_nginx_requests_total_by_verb_1m{request=~\"$request\", verb=~\"$verb\", resp_code=~\"$resp_code\"})) > 0",
-                    "legendFormat": "{{verb}}",
-                    "range": true
-                }
-            ],
-            "fieldConfig": {
-                "defaults": {
-                    "unit": "short",
-                    "custom": {
-                        "lineInterpolation": "stepAfter",
-                        "drawStyle": "line",
-                        "lineWidth": 1,
-                        "fillOpacity": 0,
-                        "gradientMode": "none",
-                        "spanNulls": false,
-                        "showPoints": "auto",
-                        "pointSize": 5,
-                        "stacking": {
-                            "mode": "none",
-                            "group": "A"
-                        },
-                        "axisPlacement": "auto",
-                        "barAlignment": 0,
-                        "scaleDistribution": {
-                            "type": "linear"
-                        }
-                    }
-                },
-                "overrides": []
-            },
-            "options": {
-                "legend": {
-                    "displayMode": "table",
-                    "placement": "right",
-                    "calcs": [],
-                    "width": 250
-                },
-                "tooltip": {
-                    "mode": "multi",
-                    "sort": "desc"
-                }
-            }
-        },
-        {
-            "id": 304,
-            "type": "timeseries",
-            "title": "2xx Response Volume by API (1m)",
-            "gridPos": {
-                "h": 9,
-                "w": 12,
-                "x": 0,
-                "y": 34
-            },
-            "datasource": {
-                "type": "prometheus",
-                "uid": "prometheus"
-            },
-            "targets": [
-                {
-                    "refId": "A",
-                    "expr": "(sum by (request) (loki_nginx_requests_total_by_verb_1m{request=~\"$request\", request=~\".*/api.*\", verb=~\"$verb\", resp_code=~\"2..\"})) > 0",
-                    "legendFormat": "{{request}}",
-                    "range": true
-                }
-            ],
-            "fieldConfig": {
-                "defaults": {
-                    "unit": "short",
-                    "custom": {
-                        "drawStyle": "line",
-                        "lineWidth": 1,
-                        "fillOpacity": 10,
-                        "gradientMode": "none",
-                        "spanNulls": false,
-                        "showPoints": "auto",
-                        "pointSize": 5,
-                        "stacking": {
-                            "mode": "none",
-                            "group": "A"
-                        },
-                        "axisPlacement": "auto",
-                        "barAlignment": 0,
-                        "scaleDistribution": {
-                            "type": "linear"
-                        }
-                    },
-                    "color": {
-                        "mode": "palette-classic"
-                    }
-                },
-                "overrides": []
-            },
-            "options": {
-                "legend": {
-                    "displayMode": "table",
-                    "placement": "right",
-                    "calcs": [],
-                    "width": 250
-                },
-                "tooltip": {
-                    "mode": "multi",
-                    "sort": "desc"
-                }
-            }
-        },
-        {
-            "id": 305,
-            "type": "timeseries",
-            "title": "3xx Response Volume by API (1m)",
-            "gridPos": {
-                "h": 9,
-                "w": 12,
-                "x": 12,
-                "y": 34
-            },
-            "datasource": {
-                "type": "prometheus",
-                "uid": "prometheus"
-            },
-            "targets": [
-                {
-                    "refId": "A",
-                    "expr": "(sum by (request) (loki_nginx_requests_total_by_verb_1m{request=~\"$request\", request=~\".*/api.*\", verb=~\"$verb\", resp_code=~\"3..\"})) > 0",
-                    "legendFormat": "{{request}}",
-                    "range": true
-                }
-            ],
-            "fieldConfig": {
-                "defaults": {
-                    "unit": "short",
-                    "custom": {
-                        "drawStyle": "line",
-                        "lineWidth": 1,
-                        "fillOpacity": 10,
-                        "gradientMode": "none",
-                        "spanNulls": false,
-                        "showPoints": "auto",
-                        "pointSize": 5,
-                        "stacking": {
-                            "mode": "none",
-                            "group": "A"
-                        },
-                        "axisPlacement": "auto",
-                        "barAlignment": 0,
-                        "scaleDistribution": {
-                            "type": "linear"
-                        }
-                    },
-                    "color": {
-                        "mode": "palette-classic"
-                    }
-                },
-                "overrides": []
-            },
-            "options": {
-                "legend": {
-                    "displayMode": "table",
-                    "placement": "right",
-                    "calcs": [],
-                    "width": 250
-                },
-                "tooltip": {
-                    "mode": "multi",
-                    "sort": "desc"
-                }
-            }
-        },
-        {
-            "id": 306,
-            "type": "timeseries",
-            "title": "4xx Response Volume by API (1m)",
-            "gridPos": {
-                "h": 9,
-                "w": 12,
-                "x": 0,
-                "y": 43
-            },
-            "datasource": {
-                "type": "prometheus",
-                "uid": "prometheus"
-            },
-            "targets": [
-                {
-                    "refId": "A",
-                    "expr": "(sum by (request) (loki_nginx_requests_total_by_verb_1m{request=~\"$request\", request=~\".*/api.*\", verb=~\"$verb\", resp_code=~\"4..\"})) > 0",
-                    "legendFormat": "{{request}}",
-                    "range": true
-                }
-            ],
-            "fieldConfig": {
-                "defaults": {
-                    "unit": "short",
-                    "custom": {
-                        "drawStyle": "line",
-                        "lineWidth": 1,
-                        "fillOpacity": 10,
-                        "gradientMode": "none",
-                        "spanNulls": false,
-                        "showPoints": "auto",
-                        "pointSize": 5,
-                        "stacking": {
-                            "mode": "none",
-                            "group": "A"
-                        },
-                        "axisPlacement": "auto",
-                        "barAlignment": 0,
-                        "scaleDistribution": {
-                            "type": "linear"
-                        }
-                    },
-                    "color": {
-                        "mode": "palette-classic"
-                    }
-                },
-                "overrides": []
-            },
-            "options": {
-                "legend": {
-                    "displayMode": "table",
-                    "placement": "right",
-                    "calcs": [],
-                    "width": 250
-                },
-                "tooltip": {
-                    "mode": "multi",
-                    "sort": "desc"
-                }
-            }
-        },
-        {
-            "id": 307,
-            "type": "timeseries",
-            "title": "5xx Response Volume by API (1m)",
-            "gridPos": {
-                "h": 9,
-                "w": 12,
-                "x": 12,
-                "y": 43
-            },
-            "datasource": {
-                "type": "prometheus",
-                "uid": "prometheus"
-            },
-            "targets": [
-                {
-                    "refId": "A",
-                    "expr": "(sum by (request) (loki_nginx_requests_total_by_verb_1m{request=~\"$request\", request=~\".*/api.*\", verb=~\"$verb\", resp_code=~\"5..\"})) > 0",
-                    "legendFormat": "{{request}}",
-                    "range": true
-                }
-            ],
-            "fieldConfig": {
-                "defaults": {
-                    "unit": "short",
-                    "custom": {
-                        "drawStyle": "line",
-                        "lineWidth": 1,
-                        "fillOpacity": 10,
-                        "gradientMode": "none",
-                        "spanNulls": false,
-                        "showPoints": "auto",
-                        "pointSize": 5,
-                        "stacking": {
-                            "mode": "none",
-                            "group": "A"
-                        },
-                        "axisPlacement": "auto",
-                        "barAlignment": 0,
-                        "scaleDistribution": {
-                            "type": "linear"
-                        }
-                    },
-                    "color": {
-                        "mode": "palette-classic"
-                    }
-                },
-                "overrides": []
-            },
-            "options": {
-                "legend": {
-                    "displayMode": "table",
-                    "placement": "right",
-                    "calcs": [],
-                    "width": 250
-                },
-                "tooltip": {
-                    "mode": "multi",
-                    "sort": "desc"
-                }
-            }
-        },
-        {
-            "id": 303,
-            "type": "timeseries",
-            "title": "Error Volume Mix (1m)",
-            "gridPos": {
-                "h": 9,
-                "w": 24,
-                "x": 0,
-                "y": 52
-            },
-            "datasource": {
-                "type": "prometheus",
-                "uid": "prometheus"
-            },
-            "targets": [
-                {
-                    "refId": "A",
-                    "expr": "(sum by (resp_code) (loki_nginx_requests_total_by_verb_1m{request=~\"$request\", verb=~\"$verb\", resp_code=~\"$resp_code\"})) > 0",
-                    "legendFormat": "{{resp_code}}",
-                    "range": true
-                }
-            ],
-            "fieldConfig": {
-                "defaults": {
-                    "unit": "short",
-                    "custom": {
-                        "drawStyle": "line",
-                        "lineWidth": 1,
-                        "fillOpacity": 70,
-                        "gradientMode": "none",
-                        "spanNulls": false,
-                        "showPoints": "auto",
-                        "pointSize": 5,
-                        "stacking": {
-                            "mode": "normal",
-                            "group": "A"
-                        },
-                        "axisPlacement": "auto",
-                        "barAlignment": 0,
-                        "scaleDistribution": {
-                            "type": "linear"
-                        }
-                    }
-                },
-                "overrides": []
-            },
-            "options": {
-                "legend": {
-                    "displayMode": "table",
-                    "placement": "right",
-                    "calcs": [],
-                    "width": 250
-                },
-                "tooltip": {
-                    "mode": "multi",
-                    "sort": "desc"
-                }
-            }
-        },
-        {
-            "type": "row",
-            "title": "IV. Geo Distribution",
-            "gridPos": {
-                "h": 1,
-                "w": 24,
-                "x": 0,
-                "y": 61
+                "y": 48
             },
             "id": 400,
             "collapsed": false,
@@ -957,7 +1043,7 @@
                 "h": 10,
                 "w": 12,
                 "x": 0,
-                "y": 62
+                "y": 49
             },
             "datasource": {
                 "type": "prometheus",
@@ -1057,7 +1143,7 @@
                 "h": 10,
                 "w": 12,
                 "x": 12,
-                "y": 62
+                "y": 49
             },
             "datasource": {
                 "type": "prometheus",
@@ -1153,7 +1239,7 @@
                 "h": 10,
                 "w": 24,
                 "x": 0,
-                "y": 72
+                "y": 59
             },
             "datasource": {
                 "type": "prometheus",
@@ -1418,34 +1504,6 @@
     "templating": {
         "list": [
             {
-                "name": "request",
-                "label": "Request",
-                "type": "query",
-                "datasource": {
-                    "type": "prometheus",
-                    "uid": "prometheus"
-                },
-                "definition": "label_values(loki_nginx_requests_rate_by_verb, request)",
-                "query": {
-                    "query": "label_values(loki_nginx_requests_rate_by_verb, request)",
-                    "refId": "PrometheusVariableQueryEditor-VariableQuery"
-                },
-                "refresh": 1,
-                "multi": true,
-                "includeAll": true,
-                "allValue": ".*",
-                "current": {
-                    "selected": true,
-                    "text": [
-                        "All"
-                    ],
-                    "value": [
-                        "$__all"
-                    ]
-                },
-                "sort": 0
-            },
-            {
                 "name": "verb",
                 "label": "Verb",
                 "type": "query",
@@ -1453,9 +1511,9 @@
                     "type": "prometheus",
                     "uid": "prometheus"
                 },
-                "definition": "label_values(loki_nginx_requests_rate_by_verb{request=~\"$request\"}, verb)",
+                "definition": "label_values(loki_nginx_requests_rate_by_verb, verb)",
                 "query": {
-                    "query": "label_values(loki_nginx_requests_rate_by_verb{request=~\"$request\"}, verb)",
+                    "query": "label_values(loki_nginx_requests_rate_by_verb, verb)",
                     "refId": "PrometheusVariableQueryEditor-VariableQuery"
                 },
                 "refresh": 2,
@@ -1500,6 +1558,46 @@
                     ]
                 },
                 "sort": 0
+            },
+            {
+                "name": "topk",
+                "label": "Top K",
+                "type": "custom",
+                "query": "5,10,15,20,50",
+                "current": {
+                    "selected": true,
+                    "text": "5",
+                    "value": "5"
+                },
+                "options": [
+                    {
+                        "selected": true,
+                        "text": "5",
+                        "value": "5"
+                    },
+                    {
+                        "selected": false,
+                        "text": "10",
+                        "value": "10"
+                    },
+                    {
+                        "selected": false,
+                        "text": "15",
+                        "value": "15"
+                    },
+                    {
+                        "selected": false,
+                        "text": "20",
+                        "value": "20"
+                    },
+                    {
+                        "selected": false,
+                        "text": "50",
+                        "value": "50"
+                    }
+                ],
+                "multi": false,
+                "includeAll": false
             }
         ]
     },
@@ -1522,7 +1620,7 @@
         ]
     },
     "timezone": "",
-    "title": "API Monitoring & Observability",
+    "title": "API",
     "uid": "nginx-api-observability",
     "version": 1,
     "weekStart": ""

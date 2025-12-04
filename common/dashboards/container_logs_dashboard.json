@@ -276,7 +276,7 @@
         ]
     },
     "timezone": "",
-    "title": "Container Logs Dashboard",
+    "title": "Logs",
     "uid": "container-logs",
     "version": 1,
     "weekStart": ""

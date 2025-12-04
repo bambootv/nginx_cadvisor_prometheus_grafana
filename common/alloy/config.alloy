@@ -1,0 +1,357 @@
+logging {
+  level  = "info"
+  format = "logfmt"
+}
+
+// ============================================================================
+// PROMETHEUS REMOTE WRITE (LOCAL OR CLOUD VIA ENV)
+// ============================================================================
+prometheus.remote_write "prometheus" {
+  endpoint {
+    url = env("GRAFANA_CLOUD_PROM_URL")
+
+    queue_config {
+      capacity             = 10000
+      max_shards           = 10
+      max_samples_per_send = 5000
+    }
+
+    basic_auth {
+      username = env("GRAFANA_CLOUD_PROM_USER")
+      password = env("GRAFANA_CLOUD_API_KEY")
+    }
+  }
+}
+
+// ============================================================================
+// SYSTEM METRICS (Node Exporter)
+// ============================================================================
+prometheus.exporter.unix "system" {
+  procfs_path = "/host/proc"
+  sysfs_path  = "/host/sys"
+  rootfs_path = "/host/root"
+
+  enable_collectors = [
+    "cpu",
+    "cpufreq",
+    "diskstats",
+    "filesystem",
+    "loadavg",
+    "meminfo",
+    "netdev",
+    "netstat",
+    "stat",
+    "time",
+    "uname",
+    "vmstat",
+  ]
+  filesystem {
+    mount_points_exclude = "^/(dev|proc|sys|var/lib/docker/.+)($|/)"
+    fs_types_exclude     = "^(autofs|binfmt_misc|bpf|cgroup2?|configfs|debugfs|devpts|devtmpfs|fusectl|hugetlbfs|iso9660|mqueue|nsfs|overlay|proc|procfs|pstore|rpc_pipefs|securityfs|selinuxfs|squashfs|sysfs|tracefs)$"
+  }
+}
+
+prometheus.scrape "system" {
+  targets         = prometheus.exporter.unix.system.targets
+  forward_to      = [prometheus.remote_write.prometheus.receiver]
+  scrape_interval = "15s"
+}
+
+// ============================================================================
+// CONTAINER METRICS (cAdvisor)
+// ============================================================================
+prometheus.exporter.cadvisor "containers" {
+  docker_host            = "unix:///var/run/docker.sock"
+  docker_only            = true
+  store_container_labels = true
+}
+
+prometheus.scrape "cadvisor" {
+  targets         = prometheus.exporter.cadvisor.containers.targets
+  forward_to      = [prometheus.relabel.cadvisor.receiver]
+  scrape_interval = "10s"
+}
+
+prometheus.relabel "cadvisor" {
+  forward_to = [prometheus.remote_write.prometheus.receiver]
+
+  rule {
+    source_labels = ["__address__"]
+    target_label  = "job"
+    replacement   = "integrations/cadvisor"
+  }
+
+  // ==========================================================================
+  // CONTAINER LABELS
+  // ==========================================================================
+
+  // Clean up container name (remove leading /)
+  rule {
+    source_labels = ["name"]
+    target_label  = "container"
+    regex         = "/?(.+)"
+    replacement   = "$1"
+  }
+
+  // Extract Service Name (Swarm > Compose)
+  rule {
+    source_labels = ["container_label_com_docker_swarm_service_name"]
+    target_label  = "service"
+  }
+
+  rule {
+    source_labels = ["container_label_com_docker_compose_service"]
+    target_label  = "service"
+  }
+
+  // Extract Stack/Project Name
+  rule {
+    source_labels = ["container_label_com_docker_stack_namespace"]
+    target_label  = "stack"
+  }
+
+  rule {
+    source_labels = ["container_label_com_docker_compose_project"]
+    target_label  = "project"
+  }
+}
+
+// ============================================================================
+// NGINX LOGS → LOKI (from Docker logs)
+// Note: Nginx logs are now sent to stdout/stderr and collected via Docker
+// Nginx-specific log processing is done in loki.process.docker_logs below
+// ============================================================================
+
+// ============================================================================
+// DOCKER CONTAINER LOGS → LOKI
+// ============================================================================
+discovery.docker "containers" {
+  host = "unix:///var/run/docker.sock"
+}
+
+discovery.relabel "docker_logs" {
+  targets = discovery.docker.containers.targets
+
+  // Container name (bỏ dấu / ở đầu)
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    target_label  = "container"
+    regex         = "/?(.+)"
+    replacement   = "$1"
+    action        = "replace"
+  }
+
+  // Container ID (short)
+  rule {
+    source_labels = ["__meta_docker_container_id"]
+    target_label  = "container_id"
+    regex         = "([0-9a-f]{12}).*"
+    replacement   = "$1"
+    action        = "replace"
+  }
+
+  // Image name
+  rule {
+    source_labels = ["__meta_docker_container_image"]
+    target_label  = "image"
+    regex         = "(.+)"
+    replacement   = "$1"
+    action        = "replace"
+  }
+
+  // ==========================================================================
+  // COMPOSE_SERVICE - Ưu tiên Swarm, fallback Compose
+  // ==========================================================================
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_swarm_service_name"]
+    target_label  = "compose_service"
+    regex         = "(.+)"
+    replacement   = "$1"
+    action        = "replace"
+  }
+
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
+    target_label  = "compose_service"
+    regex         = "(.+)"
+    replacement   = "$1"
+    action        = "replace"
+  }
+
+  // ==========================================================================
+  // SERVICE - Giống compose_service
+  // ==========================================================================
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_swarm_service_name"]
+    target_label  = "service"
+    regex         = "(.+)"
+    replacement   = "$1"
+    action        = "replace"
+  }
+
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
+    target_label  = "service"
+    regex         = "(.+)"
+    replacement   = "$1"
+    action        = "replace"
+  }
+
+  // ==========================================================================
+  // COMPOSE_PROJECT - Ưu tiên Stack namespace, fallback Compose project
+  // ==========================================================================
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_stack_namespace"]
+    target_label  = "compose_project"
+    regex         = "(.+)"
+    replacement   = "$1"
+    action        = "replace"
+  }
+
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_project"]
+    target_label  = "compose_project"
+    regex         = "(.+)"
+    replacement   = "$1"
+    action        = "replace"
+  }
+
+  // Swarm task name
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_swarm_task_name"]
+    target_label  = "task"
+    regex         = "(.+)"
+    replacement   = "$1"
+    action        = "replace"
+  }
+
+  // Node ID
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_swarm_node_id"]
+    target_label  = "node_id"
+    regex         = "(.+)"
+    replacement   = "$1"
+    action        = "replace"
+  }
+}
+
+loki.source.docker "containers" {
+  host          = "unix:///var/run/docker.sock"
+  targets       = discovery.relabel.docker_logs.output
+  labels = {
+    job = "docker_containers",
+  }
+  forward_to = [loki.process.docker_logs.receiver]
+}
+
+// Process để thêm log level detection và nginx log parsing
+loki.process "docker_logs" {
+  forward_to = [loki.write.loki.receiver]
+
+  // Parse NGINX access logs (only for nginx container)
+  stage.match {
+    selector = "{compose_service=~\"(.*_)?nginx\"}"
+
+    stage.regex {
+      expression = "^(?P<client>\\S+) (?P<ident>\\S+) (?P<auth>\\S+) \\[(?P<timestamp>[^\\]]+)\\] \"(?P<verb>\\S+) (?P<request>[^\"]+) (?P<httpversion>\\S+)\" (?P<status>\\d+) (?P<response>\\d+) \"(?P<referrer>[^\"]*)\" \"(?P<agent>[^\"]*)\" \"(?P<req_time>\\d+\\.\\d+)\"$"
+    }
+
+    stage.geoip {
+      source = "client"
+      db     = "/etc/alloy/geoip/GeoLite2-City.mmdb"
+      db_type = "city"
+    }
+
+    stage.template {
+      source   = "final_country_name"
+      template = "{{ if .geoip_country_name }}{{ .geoip_country_name }}{{ else }}Other{{ end }}"
+    }
+
+    // Extract request path (before query string)
+    stage.regex {
+      source     = "request"
+      expression = "^(?P<request_path>[^?]+)"
+    }
+
+    stage.labels {
+      values = {
+        verb         = "verb",
+        request      = "request_path",
+        resp_code    = "status",
+        country_name = "final_country_name",
+      }
+    }
+
+    stage.static_labels {
+      values = {
+        job = "nginx",
+      }
+    }
+
+    stage.metrics {
+      metric.histogram {
+        name        = "nginxlog_request_duration_seconds"
+        description = "Distribution of NGINX request processing times, from logs."
+        source      = "req_time"
+        prefix      = ""
+        buckets     = [0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10]
+      }
+    }
+  }
+
+  // Detect log level (error, warn, info, debug) for all containers
+  // Set default level to unknown first
+  stage.static_labels {
+    values = {
+      level = "unknown",
+    }
+  }
+
+  stage.regex {
+    expression = "(?i)(?P<level>error|err|fatal|panic|warn|warning|info|debug)"
+  }
+
+  // Extract log level as label
+  stage.labels {
+    values = {
+      level = "level",
+    }
+  }
+}
+
+loki.write "loki" {
+  endpoint {
+    url = env("GRAFANA_CLOUD_LOKI_URL")
+
+    basic_auth {
+      username = env("GRAFANA_CLOUD_LOKI_USER")
+      password = env("GRAFANA_CLOUD_API_KEY")
+    }
+  }
+}
+
+// ============================================================================
+// ALLOY SELF MONITORING
+// ============================================================================
+prometheus.exporter.self "alloy" {}
+
+prometheus.relabel "alloy_self_labels" {
+  forward_to = [prometheus.remote_write.prometheus.receiver]
+
+  rule {
+    action       = "replace"
+    target_label = "instance"
+    replacement  = "alloy:12345"
+  }
+
+  rule {
+    action       = "replace"
+    target_label = "job"
+    replacement  = "alloy"
+  }
+}
+
+prometheus.scrape "alloy" {
+  targets    = prometheus.exporter.self.alloy.targets
+  forward_to = [prometheus.relabel.alloy_self_labels.receiver]
+}

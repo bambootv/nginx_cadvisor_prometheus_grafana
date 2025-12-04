@@ -1,3 +1,10 @@
+.env
+
 .DS_Store
 logrotate.conf
 nginx_sites_available
+
+.terraform
+terraform.tfstate
+.terraform.lock.hcl
+terraform.tfstate.backup

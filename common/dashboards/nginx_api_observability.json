@@ -378,7 +378,7 @@
         {
             "id": 106,
             "type": "timeseries",
-            "title": "Request CounterCounter",
+            "title": "Request Counter",
             "gridPos": {
                 "h": 8,
                 "w": 12,
@@ -1255,28 +1255,28 @@
                 },
                 {
                     "refId": "B",
-                    "expr": "sum by (country_name) (sum_over_time(loki_nginx_requests_total_by_country{resp_code=~\"2..\"}[$__range]))",
+                    "expr": "sum by (country_name) (sum_over_time(loki_nginx_requests_total_by_country{resp_code=~\"2..\"}[$__range])) or sum by (country_name) (sum_over_time(loki_nginx_requests_total_by_country[$__range])) * 0",
                     "format": "table",
                     "instant": true,
                     "legendFormat": "Success (2xx)"
                 },
                 {
                     "refId": "C",
-                    "expr": "sum by (country_name) (sum_over_time(loki_nginx_requests_total_by_country{resp_code=~\"3..\"}[$__range]))",
+                    "expr": "sum by (country_name) (sum_over_time(loki_nginx_requests_total_by_country{resp_code=~\"3..\"}[$__range])) or sum by (country_name) (sum_over_time(loki_nginx_requests_total_by_country[$__range])) * 0",
                     "format": "table",
                     "instant": true,
                     "legendFormat": "Redirect (3xx)"
                 },
                 {
                     "refId": "D",
-                    "expr": "sum by (country_name) (sum_over_time(loki_nginx_requests_total_by_country{resp_code=~\"4..\"}[$__range]))",
+                    "expr": "sum by (country_name) (sum_over_time(loki_nginx_requests_total_by_country{resp_code=~\"4..\"}[$__range])) or sum by (country_name) (sum_over_time(loki_nginx_requests_total_by_country[$__range])) * 0",
                     "format": "table",
                     "instant": true,
                     "legendFormat": "Client Error (4xx)"
                 },
                 {
                     "refId": "E",
-                    "expr": "sum by (country_name) (sum_over_time(loki_nginx_requests_total_by_country{resp_code=~\"5..\"}[$__range]))",
+                    "expr": "sum by (country_name) (sum_over_time(loki_nginx_requests_total_by_country{resp_code=~\"5..\"}[$__range])) or sum by (country_name) (sum_over_time(loki_nginx_requests_total_by_country[$__range])) * 0",
                     "format": "table",
                     "instant": true,
                     "legendFormat": "Server Error (5xx)"
@@ -1334,7 +1334,18 @@
                         "displayMode": "auto",
                         "inspect": false
                     },
-                    "mappings": [],
+                    "mappings": [
+                        {
+                            "type": "special",
+                            "options": {
+                                "match": "null",
+                                "result": {
+                                    "text": "0",
+                                    "index": 0
+                                }
+                            }
+                        }
+                    ],
                     "color": {
                         "mode": "thresholds"
                     },
@@ -1346,7 +1357,8 @@
                                 "value": null
                             }
                         ]
-                    }
+                    },
+                    "noValue": "0"
                 },
                 "overrides": [
                     {

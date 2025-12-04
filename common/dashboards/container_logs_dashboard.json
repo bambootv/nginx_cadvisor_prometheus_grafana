@@ -81,7 +81,7 @@
                 "h": 8,
                 "w": 24,
                 "x": 0,
-                "y": 0
+                "y": 20
             },
             "id": 1,
             "options": {
@@ -124,7 +124,7 @@
                 "h": 20,
                 "w": 24,
                 "x": 0,
-                "y": 8
+                "y": 0
             },
             "id": 2,
             "options": {
@@ -134,7 +134,7 @@
                 "showCommonLabels": false,
                 "showLabels": false,
                 "showTime": true,
-                "sortOrder": "Descending",
+                "sortOrder": "Ascending",
                 "wrapLogMessage": false
             },
             "repeat": "compose_service",

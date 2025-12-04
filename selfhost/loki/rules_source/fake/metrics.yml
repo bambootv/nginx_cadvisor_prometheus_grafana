@@ -2,14 +2,14 @@ groups:
   - name: nginx_instant_metrics
     interval: 15s
     rules:
-      - record: loki_nginx_requests_rate_by_verb
-        expr: sum by (verb, resp_code, request) (rate({job="nginx"}[5m]))
+      - record: loki_nginx_requests_rate
+        expr: sum by (resp_code, request) (rate({job="nginx"}[5m]))
 
-      - record: loki_nginx_requests_total_by_verb_1m
-        expr: sum by (verb, resp_code, request) (count_over_time({job="nginx"}[1m]))
+      - record: loki_nginx_requests_total_1m
+        expr: sum by (resp_code, request) (count_over_time({job="nginx"}[1m]))
 
-      - record: loki_nginx_requests_total_by_verb_15s
-        expr: sum by (verb, resp_code, request) (count_over_time({job="nginx"}[15s]))
+      - record: loki_nginx_requests_total_15s
+        expr: sum by (resp_code, request) (count_over_time({job="nginx"}[15s]))
 
       - record: loki_nginx_requests_total_by_country
         expr: sum by (country_name, resp_code) (count_over_time({job="nginx"}[15s]))

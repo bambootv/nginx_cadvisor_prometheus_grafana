@@ -11,14 +11,33 @@ prometheus.remote_write "prometheus" {
     url = env("GRAFANA_CLOUD_PROM_URL")
 
     queue_config {
-      capacity             = 10000
+      capacity             = 15000
       max_shards           = 10
       max_samples_per_send = 5000
+      batch_send_deadline  = "5s"
+      min_backoff          = "30ms"
+      max_backoff          = "5s"
+      retry_on_http_429    = true
     }
 
     basic_auth {
       username = env("GRAFANA_CLOUD_PROM_USER")
       password = env("GRAFANA_CLOUD_API_KEY")
+    }
+
+    // Write-Ahead-Log for reliability
+    write_relabel_config {
+      // Drop go_* metrics (too detailed, use summary instead)
+      source_labels = ["__name__"]
+      regex         = "go_(gc|memstats)_.*"
+      action        = "drop"
+    }
+
+    // Drop Alloy internal high-cardinality metrics
+    write_relabel_config {
+      source_labels = ["__name__"]
+      regex         = "prometheus_fanout_latency.*|prometheus_remote_storage_.*|otelcol_.*"
+      action        = "drop"
     }
   }
 }
@@ -31,31 +50,43 @@ prometheus.exporter.unix "system" {
   sysfs_path  = "/host/sys"
   rootfs_path = "/host/root"
 
-  enable_collectors = [
-    "cpu",
-    "cpufreq",
-    "diskstats",
-    "filesystem",
-    "loadavg",
-    "meminfo",
-    "netdev",
-    "netstat",
-    "stat",
-    "time",
-    "uname",
-    "vmstat",
-  ]
+  enable_collectors = ["cpu", "diskstats", "filesystem", "loadavg", "meminfo", "netdev"]
+
   filesystem {
-    mount_points_exclude = "^/(dev|proc|sys|var/lib/docker/.+)($|/)"
-    fs_types_exclude     = "^(autofs|binfmt_misc|bpf|cgroup2?|configfs|debugfs|devpts|devtmpfs|fusectl|hugetlbfs|iso9660|mqueue|nsfs|overlay|proc|procfs|pstore|rpc_pipefs|securityfs|selinuxfs|squashfs|sysfs|tracefs)$"
+    mount_points_exclude = "^/(dev|proc|sys|var/lib/docker/.+|run|snap)($|/)"
+    fs_types_exclude     = "^(autofs|binfmt_misc|bpf|cgroup2?|configfs|debugfs|devpts|devtmpfs|fusectl|hugetlbfs|iso9660|mqueue|nsfs|overlay|proc|procfs|pstore|rpc_pipefs|securityfs|selinuxfs|squashfs|sysfs|tracefs|tmpfs)$"
   }
 }
 
 prometheus.scrape "system" {
   targets         = prometheus.exporter.unix.system.targets
-  forward_to      = [prometheus.remote_write.prometheus.receiver]
+  forward_to      = [prometheus.relabel.system.receiver]
   scrape_interval = "15s"
 }
+
+prometheus.relabel "system" {
+  forward_to = [prometheus.remote_write.prometheus.receiver]
+
+  rule {
+    target_label = "instance"
+    replacement  = "alloy:12345"
+  }
+
+  // Drop loop/ram disk devices (diskstats)
+  rule {
+    source_labels = ["device"]
+    regex         = "^(loop|ram|fd|sr|dm-)\\d+$"
+    action        = "drop"
+  }
+
+  // Drop virtual network interfaces (netdev)
+  rule {
+    source_labels = ["device"]
+    regex         = "^(veth.*|br-.*|docker[0-9]*|lo|virbr.*)$"
+    action        = "drop"
+  }
+}
+
 
 // ============================================================================
 // CONTAINER METRICS (cAdvisor)
@@ -76,9 +107,20 @@ prometheus.relabel "cadvisor" {
   forward_to = [prometheus.remote_write.prometheus.receiver]
 
   rule {
+    target_label = "instance"
+    replacement  = "alloy:12345"
+  }
+
+  rule {
     source_labels = ["__address__"]
     target_label  = "job"
     replacement   = "integrations/cadvisor"
+  }
+
+  rule {
+    source_labels = ["interface"]
+    regex         = "^(lo|erspan.*|sit.*|tunl.*|dummy.*)$"
+    action        = "drop"
   }
 
   // ==========================================================================
@@ -113,6 +155,24 @@ prometheus.relabel "cadvisor" {
   rule {
     source_labels = ["container_label_com_docker_compose_project"]
     target_label  = "project"
+  }
+
+  // ==========================================================================
+  // DROP METRIC NOT USE
+  // ==========================================================================
+  rule {
+    source_labels = ["__name__"]
+    regex         = "container_tasks_state|container_memory_failures_total|container_ulimits_soft|container_blkio_.*"
+    action        = "drop"
+  }
+
+  // ==========================================================================
+  // DROP HIGH-CARDINALITY LABELS - Chống High Churn
+  // GIỮ: service, stack/project, job, container, image (cho System Monitoring Dashboard)
+  // ==========================================================================
+  rule {
+    regex  = "^(id|name|container|image|container_label_.*)$"
+    action = "labeldrop"
   }
 }
 
@@ -241,7 +301,8 @@ loki.source.docker "containers" {
   labels = {
     job = "docker_containers",
   }
-  forward_to = [loki.process.docker_logs.receiver]
+  // Forward đến 2 pipelines: logs + metrics
+  forward_to = [loki.process.docker_logs.receiver, loki.process.nginx_metrics.receiver]
 }
 
 // Process để thêm log level detection và nginx log parsing
@@ -267,17 +328,58 @@ loki.process "docker_logs" {
       template = "{{ if .geoip_country_name }}{{ .geoip_country_name }}{{ else }}Other{{ end }}"
     }
 
-    // Extract request path (before query string)
+    // 1. Extract request path
     stage.regex {
       source     = "request"
       expression = "^(?P<request_path>[^?]+)"
     }
 
+    // 2. Normalize Numeric IDs
+    stage.replace {
+      source     = "request_path"
+      expression = "/\\d+(/|$)"
+      replace    = "/:id"
+    }
+
+    // 3. Normalize UUIDs
+    stage.replace {
+      source     = "request_path"
+      expression = "/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}"
+      replace    = "/:uuid"
+    }
+
+    // 4. Normalize Hashes
+    stage.replace {
+      source     = "request_path"
+      expression = "/[0-9a-fA-F]{32,}"
+      replace    = "/:hash"
+    }
+
+    // 5. Normalize long slugs
+    stage.replace {
+      source     = "request_path"
+      expression = "/[^/]{50,}"
+      replace    = "/:slug_long"
+    }
+
+    // Ví dụ: /api/v1/user/nguyen-van-a -> /api/v1/user/named_slug
+    stage.replace {
+      source     = "request_path"
+      expression = "/(user|profile|product|)/[^/]+(/|$)"
+      replace    = "/$1/:named_slug"
+    }
+
+    stage.template {
+      source   = "final_status"
+      template = "{{ if hasPrefix \"2\" .status }}2xx{{ else if hasPrefix \"3\" .status }}3xx{{ else if hasPrefix \"4\" .status }}4xx{{ else if hasPrefix \"5\" .status }}5xx{{ else }}other{{ end }}"
+    }
+
+    // 7. Labels cho Loki (giữ đầy đủ)
     stage.labels {
       values = {
         verb         = "verb",
         request      = "request_path",
-        resp_code    = "status",
+        resp_code    = "final_status",
         country_name = "final_country_name",
       }
     }
@@ -288,19 +390,10 @@ loki.process "docker_logs" {
       }
     }
 
-    stage.metrics {
-      metric.histogram {
-        name        = "nginxlog_request_duration_seconds"
-        description = "Distribution of NGINX request processing times, from logs."
-        source      = "req_time"
-        prefix      = ""
-        buckets     = [0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10]
-      }
-    }
+    // KHÔNG tạo metrics ở đây nữa - chuyển sang pipeline riêng
   }
 
   // Detect log level (error, warn, info, debug) for all containers
-  // Set default level to unknown first
   stage.static_labels {
     values = {
       level = "unknown",
@@ -311,10 +404,92 @@ loki.process "docker_logs" {
     expression = "(?i)(?P<level>error|err|fatal|panic|warn|warning|info|debug)"
   }
 
-  // Extract log level as label
   stage.labels {
     values = {
       level = "level",
+    }
+  }
+}
+
+// ============================================================================
+// NGINX METRICS - Pipeline riêng với labels tối thiểu
+// ============================================================================
+loki.process "nginx_metrics" {
+  forward_to = []  // Không forward logs, chỉ tạo metrics
+
+  stage.match {
+    selector = "{compose_service=~\"(.*_)?nginx\"}"
+
+    stage.regex {
+      expression = "^(?P<client>\\S+) (?P<ident>\\S+) (?P<auth>\\S+) \\[(?P<timestamp>[^\\]]+)\\] \"(?P<verb>\\S+) (?P<request>[^\"]+) (?P<httpversion>\\S+)\" (?P<status>\\d+) (?P<response>\\d+) \"(?P<referrer>[^\"]*)\" \"(?P<agent>[^\"]*)\" \"(?P<req_time>\\d+\\.\\d+)\"$"
+    }
+
+    // Normalize request path
+    stage.regex {
+      source     = "request"
+      expression = "^(?P<request_path>[^?]+)"
+    }
+
+    stage.replace {
+      source     = "request_path"
+      expression = "/\\d+(/|$)"
+      replace    = "/:id"
+    }
+
+    stage.replace {
+      source     = "request_path"
+      expression = "/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}"
+      replace    = "/:uuid"
+    }
+
+    stage.replace {
+      source     = "request_path"
+      expression = "/[0-9a-fA-F]{32,}"
+      replace    = "/:hash"
+    }
+
+    stage.replace {
+      source     = "request_path"
+      expression = "/[^/]{50,}"
+      replace    = "/:slug"
+    }
+
+    stage.label_drop {
+      values = [
+        "container_id", "container", "image", "compose_project",
+        "compose_service", "service", "task", "node_id",
+        "filename", "mountpoint", "stream", "verb",
+      ]
+    }
+
+    stage.template {
+      source   = "final_status"
+      template = "{{ if hasPrefix \"2\" .status }}2xx{{ else if hasPrefix \"3\" .status }}3xx{{ else if hasPrefix \"4\" .status }}4xx{{ else if hasPrefix \"5\" .status }}5xx{{ else }}other{{ end }}"
+    }
+
+    // Labels tối thiểu cho metrics
+    stage.labels {
+      values = {
+        request   = "request_path",
+        resp_code = "final_status",
+      }
+    }
+
+    stage.static_labels {
+      values = {
+        job = "nginx",
+      }
+    }
+
+    // Histogram với buckets đã giảm
+    stage.metrics {
+      metric.histogram {
+        name        = "nginxlog_request_duration_seconds"
+        description = "NGINX request duration from logs"
+        source      = "req_time"
+        prefix      = ""
+        buckets     = [0.1, 0.5, 1, 5]  // Giảm từ 10 buckets xuống 4
+      }
     }
   }
 }

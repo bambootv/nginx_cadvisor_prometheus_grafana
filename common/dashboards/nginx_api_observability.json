@@ -52,13 +52,13 @@
             "targets": [
                 {
                     "refId": "A",
-                    "expr": "sum(loki_nginx_requests_rate_by_verb{verb=~\"$verb\", resp_code=~\"$resp_code\"})",
+                    "expr": "sum(loki_nginx_requests_rate{resp_code=~\"$resp_code\"})",
                     "legendFormat": "Current Speed",
                     "range": true
                 },
                 {
                     "refId": "B",
-                    "expr": "sum(sum_over_time(loki_nginx_requests_total_by_verb_15s{verb=~\"$verb\", resp_code=~\"$resp_code\"}[$__range]))",
+                    "expr": "sum(sum_over_time(loki_nginx_requests_total_15s{resp_code=~\"$resp_code\"}[$__range]))",
                     "legendFormat": "Total Requests",
                     "range": true
                 }
@@ -147,7 +147,7 @@
             "targets": [
                 {
                     "refId": "A",
-                    "expr": "(sum(sum_over_time(loki_nginx_requests_total_by_verb_15s{resp_code=~\"5..\", verb=~\"$verb\"}[$__range])) / clamp_min(sum(sum_over_time(loki_nginx_requests_total_by_verb_15s{verb=~\"$verb\", resp_code=~\"$resp_code\"}[$__range])), 1)) * 100",
+                    "expr": "(sum(sum_over_time(loki_nginx_requests_total_15s{resp_code=~\"5..\"}[$__range])) / clamp_min(sum(sum_over_time(loki_nginx_requests_total_15s{resp_code=~\"$resp_code\"}[$__range])), 1)) * 100",
                     "range": false
                 }
             ],
@@ -207,7 +207,7 @@
             "targets": [
                 {
                     "refId": "A",
-                    "expr": "histogram_quantile(0.95, sum by (le) (increase(loki_process_custom_nginxlog_request_duration_seconds_bucket{verb=~\"$verb\", resp_code=~\"$resp_code\"}[$__range])))",
+                    "expr": "histogram_quantile(0.95, sum by (le) (increase(loki_process_custom_nginxlog_request_duration_seconds_bucket{resp_code=~\"$resp_code\"}[$__range])))",
                     "range": false
                 }
             ],
@@ -262,7 +262,7 @@
             "targets": [
                 {
                     "refId": "A",
-                    "expr": "histogram_quantile(0.99, sum by (le) (increase(loki_process_custom_nginxlog_request_duration_seconds_bucket{verb=~\"$verb\", resp_code=~\"$resp_code\"}[$__range])))",
+                    "expr": "histogram_quantile(0.99, sum by (le) (increase(loki_process_custom_nginxlog_request_duration_seconds_bucket{resp_code=~\"$resp_code\"}[$__range])))",
                     "range": false
                 }
             ],
@@ -317,7 +317,7 @@
             "targets": [
                 {
                     "refId": "A",
-                    "expr": "sum(loki_nginx_requests_rate_by_verb{verb=~\"$verb\", resp_code=~\"$resp_code\"})",
+                    "expr": "sum(loki_nginx_requests_rate{resp_code=~\"$resp_code\"})",
                     "legendFormat": "Total req/s",
                     "range": true
                 }
@@ -392,7 +392,7 @@
             "targets": [
                 {
                     "refId": "A",
-                    "expr": "(sum by (request) (loki_nginx_requests_total_by_verb_1m{request=~\".*/api.*\", verb=~\"$verb\", resp_code=~\"$resp_code\"})) > 0 and on(request) (topk($topk, sum by (request) (sum_over_time(loki_nginx_requests_total_by_verb_1m{request=~\".*/api.*\", verb=~\"$verb\", resp_code=~\"$resp_code\"}[$__range]))))",
+                    "expr": "(sum by (request) (loki_nginx_requests_total_1m{request=~\".*/api.*\", resp_code=~\"$resp_code\"})) > 0 and on(request) (topk($topk, sum by (request) (sum_over_time(loki_nginx_requests_total_1m{request=~\".*/api.*\", resp_code=~\"$resp_code\"}[$__range]))))",
                     "legendFormat": "{{request}}",
                     "range": true
                 }
@@ -452,7 +452,7 @@
             "targets": [
                 {
                     "refId": "A",
-                    "expr": "(sum by (request) (loki_nginx_requests_total_by_verb_1m{request=~\".*/api.*\", verb=~\"$verb\", resp_code=~\"2..\"})) > 0 and on(request) (topk($topk, sum by (request) (sum_over_time(loki_nginx_requests_total_by_verb_1m{request=~\".*/api.*\", verb=~\"$verb\", resp_code=~\"2..\"}[$__range]))))",
+                    "expr": "(sum by (request) (loki_nginx_requests_total_1m{request=~\".*/api.*\", resp_code=~\"2..\"})) > 0 and on(request) (topk($topk, sum by (request) (sum_over_time(loki_nginx_requests_total_1m{request=~\".*/api.*\", resp_code=~\"2..\"}[$__range]))))",
                     "legendFormat": "{{request}}",
                     "range": true
                 }
@@ -515,7 +515,7 @@
             "targets": [
                 {
                     "refId": "A",
-                    "expr": "(sum by (request) (loki_nginx_requests_total_by_verb_1m{request=~\".*/api.*\", verb=~\"$verb\", resp_code=~\"3..\"})) > 0 and on(request) (topk($topk, sum by (request) (sum_over_time(loki_nginx_requests_total_by_verb_1m{request=~\".*/api.*\", verb=~\"$verb\", resp_code=~\"3..\"}[$__range]))))",
+                    "expr": "(sum by (request) (loki_nginx_requests_total_1m{request=~\".*/api.*\", resp_code=~\"3..\"})) > 0 and on(request) (topk($topk, sum by (request) (sum_over_time(loki_nginx_requests_total_1m{request=~\".*/api.*\", resp_code=~\"3..\"}[$__range]))))",
                     "legendFormat": "{{request}}",
                     "range": true
                 }
@@ -578,7 +578,7 @@
             "targets": [
                 {
                     "refId": "A",
-                    "expr": "(sum by (request) (loki_nginx_requests_total_by_verb_1m{request=~\".*/api.*\", verb=~\"$verb\", resp_code=~\"4..\"})) > 0 and on(request) (topk($topk, sum by (request) (sum_over_time(loki_nginx_requests_total_by_verb_1m{request=~\".*/api.*\", verb=~\"$verb\", resp_code=~\"4..\"}[$__range]))))",
+                    "expr": "(sum by (request) (loki_nginx_requests_total_1m{request=~\".*/api.*\", resp_code=~\"4..\"})) > 0 and on(request) (topk($topk, sum by (request) (sum_over_time(loki_nginx_requests_total_1m{request=~\".*/api.*\", resp_code=~\"4..\"}[$__range]))))",
                     "legendFormat": "{{request}}",
                     "range": true
                 }
@@ -641,7 +641,7 @@
             "targets": [
                 {
                     "refId": "A",
-                    "expr": "(sum by (request) (loki_nginx_requests_total_by_verb_1m{request=~\".*/api.*\", verb=~\"$verb\", resp_code=~\"5..\"})) > 0 and on(request) (topk($topk, sum by (request) (sum_over_time(loki_nginx_requests_total_by_verb_1m{request=~\".*/api.*\", verb=~\"$verb\", resp_code=~\"5..\"}[$__range]))))",
+                    "expr": "(sum by (request) (loki_nginx_requests_total_1m{request=~\".*/api.*\", resp_code=~\"5..\"})) > 0 and on(request) (topk($topk, sum by (request) (sum_over_time(loki_nginx_requests_total_1m{request=~\".*/api.*\", resp_code=~\"5..\"}[$__range]))))",
                     "legendFormat": "{{request}}",
                     "range": true
                 }
@@ -717,7 +717,7 @@
             "targets": [
                 {
                     "refId": "A",
-                    "expr": "topk(10, sum by (request, verb) (sum_over_time(loki_nginx_requests_total_by_verb_15s{resp_code=~\"$resp_code\", verb=~\"$verb\"}[$__range])))",
+                    "expr": "topk(10, sum by (request) (sum_over_time(loki_nginx_requests_total_15s{resp_code=~\"$resp_code\"}[$__range])))",
                     "format": "table",
                     "instant": true
                 }
@@ -795,7 +795,7 @@
             "targets": [
                 {
                     "refId": "A",
-                    "expr": "topk(10, histogram_quantile(0.95, sum by (le, request, verb) (increase(loki_process_custom_nginxlog_request_duration_seconds_bucket{verb=~\"$verb\", resp_code=~\"$resp_code\"}[$__range])))>=0)",
+                    "expr": "topk(10, histogram_quantile(0.95, sum by (le, request) (increase(loki_process_custom_nginxlog_request_duration_seconds_bucket{resp_code=~\"$resp_code\"}[$__range])))>=0)",
                     "format": "table",
                     "instant": true,
                     "range": false
@@ -881,7 +881,7 @@
             "targets": [
                 {
                     "refId": "A",
-                    "expr": "topk(10, sum by (request, verb, resp_code) (sum_over_time(loki_nginx_requests_total_by_verb_15s{resp_code=~\"4..\", verb=~\"$verb\"}[$__range])))",
+                    "expr": "topk(10, sum by (request, resp_code) (sum_over_time(loki_nginx_requests_total_15s{resp_code=~\"4..\"}[$__range])))",
                     "format": "table",
                     "instant": true,
                     "range": false
@@ -960,7 +960,7 @@
             "targets": [
                 {
                     "refId": "A",
-                    "expr": "topk(10, sum by (request, verb, resp_code) (sum_over_time(loki_nginx_requests_total_by_verb_15s{resp_code=~\"5..\", verb=~\"$verb\"}[$__range])))",
+                    "expr": "topk(10, sum by (request, resp_code) (sum_over_time(loki_nginx_requests_total_15s{resp_code=~\"5..\"}[$__range])))",
                     "format": "table",
                     "instant": true,
                     "range": false
@@ -1516,34 +1516,6 @@
     "templating": {
         "list": [
             {
-                "name": "verb",
-                "label": "Verb",
-                "type": "query",
-                "datasource": {
-                    "type": "prometheus",
-                    "uid": "prometheus"
-                },
-                "definition": "label_values(loki_nginx_requests_rate_by_verb, verb)",
-                "query": {
-                    "query": "label_values(loki_nginx_requests_rate_by_verb, verb)",
-                    "refId": "PrometheusVariableQueryEditor-VariableQuery"
-                },
-                "refresh": 2,
-                "multi": true,
-                "includeAll": true,
-                "allValue": ".*",
-                "current": {
-                    "selected": true,
-                    "text": [
-                        "All"
-                    ],
-                    "value": [
-                        "$__all"
-                    ]
-                },
-                "sort": 0
-            },
-            {
                 "name": "resp_code",
                 "label": "Response Code",
                 "type": "query",
@@ -1551,9 +1523,9 @@
                     "type": "prometheus",
                     "uid": "prometheus"
                 },
-                "definition": "label_values(loki_nginx_requests_rate_by_verb, resp_code)",
+                "definition": "label_values(loki_nginx_requests_rate, resp_code)",
                 "query": {
-                    "query": "label_values(loki_nginx_requests_rate_by_verb, resp_code)",
+                    "query": "label_values(loki_nginx_requests_rate, resp_code)",
                     "refId": "PrometheusVariableQueryEditor-VariableQuery"
                 },
                 "refresh": 1,

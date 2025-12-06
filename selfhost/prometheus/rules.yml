@@ -1,0 +1,7 @@
+groups:
+  - name: nginx_loki_equivalents
+    rules:
+      # Metric bạn yêu cầu: record: loki_nginx_requests_total_15s
+      # Ý nghĩa: Tổng số request trong 15 giây vừa qua
+      - record: loki_nginx_requests_total_15s
+        expr: sum by (resp_code, request) (increase(nginx_requests_raw_total[15s]))

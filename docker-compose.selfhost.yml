@@ -109,7 +109,7 @@ services:
   # PROMETHEUS - Time-series Database
   # ============================================================================
   prometheus:
-    image: prom/prometheus:v2.53.0
+    image: prom/prometheus:v3.8.0
     ports:
       - "9090:9090"
     command:

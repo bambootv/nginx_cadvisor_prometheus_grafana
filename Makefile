@@ -30,6 +30,18 @@ stack_nginx_cloud:
 deploy_nginx_cloud:
 	docker service update --force monitoring_cloud_nginx
 
+# ==============================================================================
+# CLOUD PDC STACK (Grafana Cloud + Self-hosted Prometheus + PDC)
+# ==============================================================================
+stack_full_cloud_pdc:
+	COMMON_REPLICAS=1 NGINX_REPLICAS=1 PDC_REPLICAS=1 GRAFANA_CLOUD_PROM_URL=http://prometheus:9090/api/v1/write docker stack deploy --detach=false --compose-file docker-compose.cloud.yml monitoring_cloud
+
+stack_nginx_cloud_pdc:
+	COMMON_REPLICAS=0 NGINX_REPLICAS=1 PDC_REPLICAS=0 GRAFANA_CLOUD_PROM_URL=http://prometheus:9090/api/v1/write docker stack deploy --detach=false --compose-file docker-compose.cloud.yml monitoring_cloud
+
+deploy_nginx_cloud_pdc:
+	docker service update --force monitoring_cloud_nginx
+
 apply_rules:
 	docker run --rm \
 	--env-file .env \

@@ -166,12 +166,25 @@ prometheus.relabel "cadvisor" {
     action        = "drop"
   }
 
+  // Drop metrics with empty/invalid labels that cause write failures
+  rule {
+    source_labels = ["container"]
+    regex         = "^$"
+    action        = "drop"
+  }
+
+  rule {
+    source_labels = ["image"]
+    regex         = "^$"
+    action        = "drop"
+  }
+
   // ==========================================================================
   // DROP HIGH-CARDINALITY LABELS - Chống High Churn
   // GIỮ: service, stack/project, job, container, image (cho System Monitoring Dashboard)
   // ==========================================================================
   rule {
-    regex  = "^(id|name|container|image|container_label_.*)$"
+    regex  = "^(id|name|container_label_.*)$"
     action = "labeldrop"
   }
 }
@@ -186,7 +199,8 @@ prometheus.relabel "cadvisor" {
 // DOCKER CONTAINER LOGS → LOKI
 // ============================================================================
 discovery.docker "containers" {
-  host = "unix:///var/run/docker.sock"
+  host             = "unix:///var/run/docker.sock"
+  refresh_interval = "10s"
 }
 
 discovery.relabel "docker_logs" {
@@ -296,8 +310,9 @@ discovery.relabel "docker_logs" {
 }
 
 loki.source.docker "containers" {
-  host          = "unix:///var/run/docker.sock"
-  targets       = discovery.relabel.docker_logs.output
+  host             = "unix:///var/run/docker.sock"
+  targets          = discovery.relabel.docker_logs.output
+  refresh_interval = "10s"
   labels = {
     job = "docker_containers",
   }
@@ -328,45 +343,75 @@ loki.process "docker_logs" {
       template = "{{ if .geoip_country_name }}{{ .geoip_country_name }}{{ else }}Other{{ end }}"
     }
 
-    // 1. Extract request path
+    // Extract request path và query string
     stage.regex {
       source     = "request"
-      expression = "^(?P<request_path>[^?]+)"
+      expression = "^(?P<request_path>[^?]+)(?P<query_string>\\??.*)?"
     }
 
-    // 2. Normalize Numeric IDs
-    stage.replace {
-      source     = "request_path"
-      expression = "/\\d+(/|$)"
-      replace    = "/:id"
+    // Copy request_path sang normalized_path để xử lý
+    stage.template {
+      source   = "normalized_path"
+      template = "{{ .request_path }}"
     }
 
-    // 3. Normalize UUIDs
+    // Normalize UUIDs (LUÔN chạy - cả true và false)
     stage.replace {
-      source     = "request_path"
+      source     = "normalized_path"
       expression = "/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}"
       replace    = "/:uuid"
     }
 
-    // 4. Normalize Hashes
+    // Normalize Hashes (LUÔN chạy - cả true và false)
     stage.replace {
-      source     = "request_path"
+      source     = "normalized_path"
       expression = "/[0-9a-fA-F]{32,}"
       replace    = "/:hash"
     }
 
-    // 5. Normalize long slugs
+    // Normalize long slugs (LUÔN chạy - cả true và false)
     stage.replace {
-      source     = "request_path"
+      source     = "normalized_path"
       expression = "/[^/]{50,}"
       replace    = "/:slug_long"
     }
 
-    // Ví dụ: /api/v1/user/nguyen-van-a -> /api/v1/user/named_slug
+    stage.template {
+      source   = "path_without_id_norm"
+      template = "{{ .normalized_path }}"
+    }
+
+    // Normalize named slugs (CHỈ chạy khi true - vì nó nằm sau bước lưu path_without_id_norm)
     stage.replace {
-      source     = "request_path"
+      source     = "normalized_path"
       expression = "/(user|profile|product|)/[^/]+(/|$)"
-      replace    = "/$1/:named_slug"
+      replace    = "/$1/:named_slug$2"
+    }
+
+    // Normalize numeric IDs (CHỈ áp dụng khi NORMALIZE_NGINX_PATH=true)
+    stage.replace {
+      source     = "normalized_path"
+      expression = "/\\d+/"
+      replace    = "/:id/"
+    }
+
+    stage.replace {
+      source     = "normalized_path"
+      expression = "/\\d+$"
+      replace    = "/:id"
+    }
+
+    // FINAL: Chọn path phù hợp + query string
+    // - false: dùng request_path (GIỮ NGUYÊN gốc, không normalize gì cả)
+    // - true: dùng normalized_path (đã normalize TẤT CẢ: UUID, Hash, Slug, ID)
+    stage.template {
+      source   = "config_normalize_mode"
+      template = coalesce(sys.env("NORMALIZE_NGINX_PATH"), "false")
+    }
+
+    stage.template {
+      source   = "final_request"
+      template = "{{ if eq \"false\" .config_normalize_mode }}{{ .path_without_id_norm }}{{ .query_string }}{{ else }}{{ .normalized_path }}{{ end }}"
     }
 
     stage.template {
@@ -374,11 +419,11 @@ loki.process "docker_logs" {
       template = "{{ if hasPrefix \"2\" .status }}2xx{{ else if hasPrefix \"3\" .status }}3xx{{ else if hasPrefix \"4\" .status }}4xx{{ else if hasPrefix \"5\" .status }}5xx{{ else }}other{{ end }}"
     }
 
-    // 7. Labels cho Loki (giữ đầy đủ)
+    // 7. Labels cho Loki (sử dụng final_request đã xử lý)
     stage.labels {
       values = {
         verb         = "verb",
-        request      = "request_path",
+        request      = "final_request",
         resp_code    = "final_status",
         country_name = "final_country_name",
       }
@@ -424,16 +469,17 @@ loki.process "nginx_metrics" {
       expression = "^(?P<client>\\S+) (?P<ident>\\S+) (?P<auth>\\S+) \\[(?P<timestamp>[^\\]]+)\\] \"(?P<verb>\\S+) (?P<request>[^\"]+) (?P<httpversion>\\S+)\" (?P<status>\\d+) (?P<response>\\d+) \"(?P<referrer>[^\"]*)\" \"(?P<agent>[^\"]*)\" \"(?P<req_time>\\d+\\.\\d+)\"$"
     }
 
-    // Normalize request path
+    // Normalize request path (chỉ cho metrics - luôn normalize)
     stage.regex {
       source     = "request"
       expression = "^(?P<request_path>[^?]+)"
     }
 
+    // Metrics LUÔN normalize để tránh high cardinality
     stage.replace {
       source     = "request_path"
       expression = "/\\d+(/|$)"
-      replace    = "/:id"
+      replace    = "/:id$1"
     }
 
     stage.replace {
@@ -489,6 +535,7 @@ loki.process "nginx_metrics" {
         source      = "req_time"
         prefix      = ""
         buckets     = [0.1, 0.5, 1, 5]  // Giảm từ 10 buckets xuống 4
+        max_idle_duration = "1m"
       }
     }
   }

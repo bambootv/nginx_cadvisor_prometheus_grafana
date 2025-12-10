@@ -27,7 +27,7 @@ services:
       - ./common/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./common/nginx/nginx_sites_available:/etc/nginx/conf.d/default.conf:ro
     networks:
-      - monitoring_swarm_self_host
+      - monitoring_swarm_hybrid
     deploy:
       mode: replicated
       replicas: ${NGINX_REPLICAS:-1}
@@ -83,7 +83,7 @@ services:
       - --server.http.listen-addr=0.0.0.0:12345
       - --storage.path=/var/lib/alloy/data
     networks:
-      - monitoring_swarm_self_host
+      - monitoring_swarm_hybrid
     privileged: true
     deploy: *deploy_config
 
@@ -99,7 +99,7 @@ services:
       - loki_rules_storage:/loki/rules_storage    # Rules động từ API (read-write)
       - loki_data:/loki
     networks:
-      - monitoring_swarm_self_host
+      - monitoring_swarm_hybrid
     deploy:
       <<: *deploy_config
       resources:
@@ -110,59 +110,52 @@ services:
   # PROMETHEUS - Time-series Database
   # ============================================================================
   prometheus:
-    image: prom/prometheus:v2.53.0
+    image: prom/prometheus:v3.8.0
     ports:
       - "9090:9090"
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
-      - "--storage.tsdb.retention.time=7d"
-      - "--storage.tsdb.retention.size=2GB"
+      - "--storage.tsdb.retention.time=5d"
+      - "--storage.tsdb.retention.size=800MB"
       - '--storage.tsdb.path=/prometheus'
       - '--web.console.libraries=/usr/share/prometheus/console_libraries'
       - '--web.console.templates=/usr/share/prometheus/consoles'
       - '--web.enable-lifecycle'
-      - '--web.enable-remote-write-receiver'  # Enable remote write từ Alloy
+      - '--web.enable-remote-write-receiver'
     volumes:
       - ./selfhost/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - prometheus_data:/prometheus
     networks:
-      - monitoring_swarm_self_host
+      - monitoring_swarm_hybrid
     deploy:
       <<: *deploy_config
       resources:
         limits:
           cpus: '1.0'     # 1 Core là đủ
           memory: 1G      # CHỐT: Giới hạn cứng 1GB RAM
-  # ========================
 
   # ============================================================================
-  # GRAFANA - Visualization
+  # GRAFANA PDC AGENT (Connect local datasources to Grafana Cloud)
   # ============================================================================
-  grafana:
-    image: grafana/grafana:10.3.3
-    ports:
-      - "3456:3000"
-    volumes:
-      - ./selfhost/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
-      - ./selfhost/grafana/provisioning/dashboards/provider.yml:/etc/grafana/provisioning/dashboards/provider.yml:ro
-      - ./common/dashboards:/etc/grafana/dashboards:ro
-      - grafana_data:/var/lib/grafana
-    environment:
-      - GF_SECURITY_ADMIN_PASSWORD=admin
-      - GF_USERS_ALLOW_SIGN_UP=false
+  pdc-agent:
+    image: grafana/pdc-agent:latest
+    env_file:
+      - .env
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - /usr/bin/pdc -token "$$PDC_TOKEN" -cluster "$$PDC_CLUSTER" -gcloud-hosted-grafana-id "$$PDC_GCLOUD_HOSTED_GRAFANA_ID"
     networks:
-      - monitoring_swarm_self_host
+      - monitoring_swarm_hybrid
     deploy: *deploy_config
 
 volumes:
-  grafana_data:
   prometheus_data:
   loki_data:
   loki_rules_storage:  # Volume cho rules được tạo qua API
   alloy_data:
 
 networks:
-  monitoring_swarm_self_host:
+  monitoring_swarm_hybrid:
     driver: overlay
     ipam:
       config:

@@ -61,11 +61,19 @@ resource "grafana_dashboard" "dashboards" {
   folder = grafana_folder.vps_folder.id
 
   # Replace UIDs in the JSON to match the newly created Datasources
-  config_json = replace(
-    replace(
-      file("${path.module}/../../../../common/dashboards/${each.key}"),
-      "\"uid\": \"loki\"", "\"uid\": \"${grafana_data_source.loki.uid}\""
+  # AND update the Dashboard UID/Title to be unique per VPS
+  config_json = jsonencode(merge(
+    jsondecode(
+      replace(
+        replace(
+          file("${path.module}/../../../../common/dashboards/${each.key}"),
+          "\"uid\": \"loki\"", "\"uid\": \"${grafana_data_source.loki.uid}\""
+        ),
+        "\"uid\": \"prometheus\"", "\"uid\": \"${grafana_data_source.prometheus.uid}\""
+      )
     ),
-    "\"uid\": \"prometheus\"", "\"uid\": \"${grafana_data_source.prometheus.uid}\""
-  )
+    {
+      uid   = "${jsondecode(file("${path.module}/../../../../common/dashboards/${each.key}")).uid}-${var.vps_name}"
+    }
+  ))
 }

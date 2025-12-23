@@ -57,8 +57,8 @@ limits_config:
   max_query_parallelism: 32
   max_entries_limit_per_query: 10000
   reject_old_samples: true
-  reject_old_samples_max_age: 168h
-  retention_period: 168h
+  reject_old_samples_max_age: 72h
+  retention_period: 72h
   allow_structured_metadata: false
 
 schema_config:

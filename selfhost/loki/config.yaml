@@ -63,15 +63,6 @@ limits_config:
 
 schema_config:
   configs:
-    # Khối cũ để đọc dữ liệu cũ
-    - from: 2020-10-24
-      store: boltdb-shipper
-      object_store: filesystem
-      schema: v12
-      index:
-        prefix: index_
-        period: 24h
-    # Khối mới cho dữ liệu mới, hiệu năng tốt hơn
     - from: 2025-11-11
       store: tsdb
       object_store: filesystem
@@ -79,6 +70,14 @@ schema_config:
       index:
         prefix: index_
         period: 24h
+
+compactor:
+  working_directory: /loki/compactor
+  compaction_interval: 10m
+  retention_enabled: true
+  retention_delete_delay: 1m
+  retention_delete_worker_count: 150
+  delete_request_store: filesystem
 
 ruler:
   rule_path: /loki/rules_storage # Đọc rules động từ API

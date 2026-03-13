@@ -1,0 +1,27 @@
+groups:
+  - name: nginx_victorialogs_metrics
+    type: vlogs
+    interval: 15s
+    rules:
+      # Mirrors hybrid/loki/rules_source/fake/metrics.yml, but derived from VictoriaLogs (LogsQL)
+      # Prefix with vlogs_ to avoid collision with Loki ruler outputs.
+      - record: vlogs_nginx_requests_rate
+        expr: '_time:5m {job="nginx"} | stats by (job, request, resp_code) rate()'
+
+      - record: vlogs_nginx_requests_total_1m
+        expr: '_time:1m {job="nginx"} | stats by (job, request, resp_code) count()'
+
+      - record: vlogs_nginx_requests_total_15s
+        expr: '_time:15s {job="nginx"} | stats by (job, request, resp_code) count()'
+
+      - record: vlogs_nginx_requests_total_by_country
+        expr: '_time:5m {job="nginx"} | stats by (job, country_name, resp_code) count()'
+
+      # Latency quantiles derived directly from raw log message (last quoted field is $request_time)
+      # Emits one timeseries per quantile via the stats_result label (p50/p90/p99)
+      - record: vlogs_nginx_request_duration_seconds
+        expr: '_time:5m {job="nginx"} | extract_regexp ''"(?P<req_time>\\d+\\.\\d+)"$'' | stats by (job, request, resp_code) quantile(0.5, req_time) p50, quantile(0.9, req_time) p90, quantile(0.95, req_time) p95, quantile(0.99, req_time) p99'
+
+      # Overall latency quantiles across all requests (no request label)
+      - record: vlogs_nginx_request_duration_seconds_overall
+        expr: '_time:5m {job="nginx"} | extract_regexp ''"(?P<req_time>\\d+\\.\\d+)"$'' | stats by (job, resp_code) quantile(0.5, req_time) p50, quantile(0.9, req_time) p90, quantile(0.95, req_time) p95, quantile(0.99, req_time) p99'

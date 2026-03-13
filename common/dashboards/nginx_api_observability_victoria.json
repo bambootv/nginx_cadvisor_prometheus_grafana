@@ -1,0 +1,445 @@
+{
+    "annotations": {
+        "list": [
+            {
+                "builtIn": 1,
+                "datasource": {
+                    "type": "grafana",
+                    "uid": "grafana"
+                },
+                "enable": true,
+                "hide": true,
+                "iconColor": "rgba(0, 211, 255, 1)",
+                "name": "Annotations & Alerts",
+                "type": "dashboard"
+            }
+        ]
+    },
+    "editable": true,
+    "fiscalYearStartMonth": 0,
+    "graphTooltip": 1,
+    "id": null,
+    "links": [],
+    "liveNow": false,
+    "panels": [
+        {
+            "type": "row",
+            "title": "I. Overview (VictoriaMetrics)",
+            "gridPos": {
+                "h": 1,
+                "w": 24,
+                "x": 0,
+                "y": 0
+            },
+            "id": 100,
+            "collapsed": false,
+            "panels": []
+        },
+        {
+            "id": 1,
+            "type": "stat",
+            "title": "Requests / second (RPS)",
+            "gridPos": {
+                "h": 4,
+                "w": 6,
+                "x": 0,
+                "y": 1
+            },
+            "datasource": {
+                "type": "prometheus",
+                "uid": "victoriametrics"
+            },
+            "targets": [
+                {
+                    "refId": "A",
+                    "expr": "sum(vlogs_nginx_requests_rate{resp_code=~\"$resp_code\"})",
+                    "legendFormat": "RPS",
+                    "range": true
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "reqps"
+                },
+                "overrides": []
+            },
+            "options": {
+                "reduceOptions": {
+                    "values": false,
+                    "calcs": [
+                        "lastNotNull"
+                    ]
+                },
+                "orientation": "auto",
+                "textMode": "auto",
+                "colorMode": "value"
+            }
+        },
+        {
+            "id": 2,
+            "type": "stat",
+            "title": "Total Requests (range)",
+            "gridPos": {
+                "h": 4,
+                "w": 6,
+                "x": 6,
+                "y": 1
+            },
+            "datasource": {
+                "type": "prometheus",
+                "uid": "victoriametrics"
+            },
+            "targets": [
+                {
+                    "refId": "A",
+                    "expr": "sum(sum_over_time(vlogs_nginx_requests_total_15s{resp_code=~\"$resp_code\"}[$__range]))",
+                    "legendFormat": "Requests",
+                    "range": true
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "short"
+                },
+                "overrides": []
+            },
+            "options": {
+                "reduceOptions": {
+                    "values": false,
+                    "calcs": [
+                        "lastNotNull"
+                    ]
+                },
+                "orientation": "auto",
+                "textMode": "auto",
+                "colorMode": "value"
+            }
+        },
+        {
+            "id": 3,
+            "type": "gauge",
+            "title": "5xx Error % (range)",
+            "gridPos": {
+                "h": 4,
+                "w": 6,
+                "x": 12,
+                "y": 1
+            },
+            "datasource": {
+                "type": "prometheus",
+                "uid": "victoriametrics"
+            },
+            "targets": [
+                {
+                    "refId": "A",
+                    "expr": "(sum(sum_over_time(vlogs_nginx_requests_total_15s{resp_code=~\"5..\"}[$__range])) / clamp_min(sum(sum_over_time(vlogs_nginx_requests_total_15s{resp_code=~\"$resp_code\"}[$__range])), 1)) * 100",
+                    "legendFormat": "5xx%",
+                    "range": true
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "percent",
+                    "min": 0,
+                    "max": 100,
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            },
+                            {
+                                "color": "yellow",
+                                "value": 1
+                            },
+                            {
+                                "color": "red",
+                                "value": 5
+                            }
+                        ]
+                    }
+                },
+                "overrides": []
+            },
+            "options": {
+                "reduceOptions": {
+                    "values": false,
+                    "calcs": [
+                        "lastNotNull"
+                    ]
+                },
+                "showThresholdLabels": false,
+                "showThresholdMarkers": true
+            }
+        },
+        {
+            "id": 4,
+            "type": "timeseries",
+            "title": "RPS by Status",
+            "gridPos": {
+                "h": 8,
+                "w": 24,
+                "x": 0,
+                "y": 5
+            },
+            "datasource": {
+                "type": "prometheus",
+                "uid": "victoriametrics"
+            },
+            "targets": [
+                {
+                    "refId": "A",
+                    "expr": "sum by (resp_code) (vlogs_nginx_requests_rate)",
+                    "legendFormat": "{{resp_code}}",
+                    "range": true
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "reqps"
+                },
+                "overrides": []
+            },
+            "options": {
+                "legend": {
+                    "displayMode": "list",
+                    "placement": "bottom",
+                    "showLegend": true
+                }
+            }
+        },
+        {
+            "type": "row",
+            "title": "II. Latency (VictoriaLogs rules)",
+            "gridPos": {
+                "h": 1,
+                "w": 24,
+                "x": 0,
+                "y": 13
+            },
+            "id": 200,
+            "collapsed": false,
+            "panels": []
+        },
+        {
+            "id": 5,
+            "type": "timeseries",
+            "title": "Overall latency p95 / p99 (5m window)",
+            "gridPos": {
+                "h": 8,
+                "w": 24,
+                "x": 0,
+                "y": 14
+            },
+            "datasource": {
+                "type": "prometheus",
+                "uid": "victoriametrics"
+            },
+            "targets": [
+                {
+                    "refId": "A",
+                    "expr": "max(vlogs_nginx_request_duration_seconds_overall{stats_result=\"p95\", resp_code=~\"$resp_code\"})",
+                    "legendFormat": "p95",
+                    "range": true
+                },
+                {
+                    "refId": "B",
+                    "expr": "max(vlogs_nginx_request_duration_seconds_overall{stats_result=\"p99\", resp_code=~\"$resp_code\"})",
+                    "legendFormat": "p99",
+                    "range": true
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "s"
+                },
+                "overrides": []
+            },
+            "options": {
+                "legend": {
+                    "displayMode": "list",
+                    "placement": "bottom",
+                    "showLegend": true
+                }
+            }
+        },
+        {
+            "type": "row",
+            "title": "III. Top endpoints",
+            "gridPos": {
+                "h": 1,
+                "w": 24,
+                "x": 0,
+                "y": 22
+            },
+            "id": 300,
+            "collapsed": false,
+            "panels": []
+        },
+        {
+            "id": 6,
+            "type": "table",
+            "title": "Top API endpoints by volume",
+            "gridPos": {
+                "h": 9,
+                "w": 12,
+                "x": 0,
+                "y": 23
+            },
+            "datasource": {
+                "type": "prometheus",
+                "uid": "victoriametrics"
+            },
+            "targets": [
+                {
+                    "refId": "A",
+                    "expr": "topk($topk, sum by (request) (sum_over_time(vlogs_nginx_requests_total_1m{request=~\".*/api.*\", resp_code=~\"$resp_code\"}[$__range])))",
+                    "legendFormat": "{{request}}",
+                    "range": true
+                }
+            ],
+            "options": {
+                "showHeader": true
+            },
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "short"
+                },
+                "overrides": []
+            }
+        },
+        {
+            "id": 7,
+            "type": "table",
+            "title": "Top API endpoints by p95 latency (approx over range)",
+            "gridPos": {
+                "h": 9,
+                "w": 12,
+                "x": 12,
+                "y": 23
+            },
+            "datasource": {
+                "type": "prometheus",
+                "uid": "victoriametrics"
+            },
+            "targets": [
+                {
+                    "refId": "A",
+                    "expr": "topk($topk, max_over_time(vlogs_nginx_request_duration_seconds{stats_result=\"p95\", resp_code=~\"$resp_code\", request=~\".*/api.*\"}[$__range]))",
+                    "legendFormat": "{{request}}",
+                    "range": true
+                }
+            ],
+            "options": {
+                "showHeader": true
+            },
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "s"
+                },
+                "overrides": []
+            }
+        },
+        {
+            "type": "row",
+            "title": "IV. Geography",
+            "gridPos": {
+                "h": 1,
+                "w": 24,
+                "x": 0,
+                "y": 32
+            },
+            "id": 400,
+            "collapsed": false,
+            "panels": []
+        },
+        {
+            "id": 8,
+            "type": "table",
+            "title": "Requests by country (range)",
+            "gridPos": {
+                "h": 9,
+                "w": 24,
+                "x": 0,
+                "y": 33
+            },
+            "datasource": {
+                "type": "prometheus",
+                "uid": "victoriametrics"
+            },
+            "targets": [
+                {
+                    "refId": "A",
+                    "expr": "topk(50, sum by (country_name) (sum_over_time(vlogs_nginx_requests_total_by_country{resp_code=~\"$resp_code\"}[$__range])))",
+                    "legendFormat": "{{country_name}}",
+                    "range": true
+                }
+            ],
+            "options": {
+                "showHeader": true
+            },
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "short"
+                },
+                "overrides": []
+            }
+        }
+    ],
+    "refresh": "30s",
+    "schemaVersion": 39,
+    "style": "dark",
+    "tags": [
+        "nginx",
+        "victoriametrics",
+        "victorialogs"
+    ],
+    "templating": {
+        "list": [
+            {
+                "name": "resp_code",
+                "type": "query",
+                "label": "HTTP Status",
+                "datasource": {
+                    "type": "prometheus",
+                    "uid": "victoriametrics"
+                },
+                "query": {
+                    "query": "label_values(vlogs_nginx_requests_rate, resp_code)",
+                    "refId": "StandardVariableQuery"
+                },
+                "definition": "label_values(vlogs_nginx_requests_rate, resp_code)",
+                "refresh": 2,
+                "multi": true,
+                "includeAll": true,
+                "allValue": ".*",
+                "current": {
+                    "selected": true,
+                    "text": "All",
+                    "value": ".*"
+                }
+            },
+            {
+                "name": "topk",
+                "type": "custom",
+                "label": "TopK",
+                "query": "5,10,20",
+                "current": {
+                    "selected": false,
+                    "text": "10",
+                    "value": "10"
+                }
+            }
+        ]
+    },
+    "time": {
+        "from": "now-6h",
+        "to": "now"
+    },
+    "timepicker": {},
+    "timezone": "",
+    "title": "Nginx API Observability (VictoriaMetrics)",
+    "uid": "nginx-api-observability-victoria",
+    "version": 1
+}

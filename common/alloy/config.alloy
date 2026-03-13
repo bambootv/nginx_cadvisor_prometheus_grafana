@@ -43,6 +43,25 @@ prometheus.remote_write "prometheus" {
 }
 
 // ============================================================================
+// VICTORIA METRICS REMOTE WRITE (HYBRID)
+// ==========================================================================
+prometheus.remote_write "victoriametrics" {
+  endpoint {
+    url = "http://victoria-metrics:8428/api/v1/write"
+
+    queue_config {
+      capacity             = 15000
+      max_shards           = 10
+      max_samples_per_send = 5000
+      batch_send_deadline  = "5s"
+      min_backoff          = "30ms"
+      max_backoff          = "5s"
+      retry_on_http_429    = true
+    }
+  }
+}
+
+// ============================================================================
 // SYSTEM METRICS (Node Exporter)
 // ============================================================================
 prometheus.exporter.unix "system" {
@@ -65,7 +84,7 @@ prometheus.scrape "system" {
 }
 
 prometheus.relabel "system" {
-  forward_to = [prometheus.remote_write.prometheus.receiver]
+  forward_to = [prometheus.remote_write.prometheus.receiver, prometheus.remote_write.victoriametrics.receiver]
 
   rule {
     target_label = "instance"
@@ -104,7 +123,7 @@ prometheus.scrape "cadvisor" {
 }
 
 prometheus.relabel "cadvisor" {
-  forward_to = [prometheus.remote_write.prometheus.receiver]
+  forward_to = [prometheus.remote_write.prometheus.receiver, prometheus.remote_write.victoriametrics.receiver]
 
   rule {
     target_label = "instance"
@@ -322,7 +341,7 @@ loki.source.docker "containers" {
 
 // Process để thêm log level detection và nginx log parsing
 loki.process "docker_logs" {
-  forward_to = [loki.write.loki.receiver]
+  forward_to = [loki.write.loki.receiver, loki.write.victorialogs.receiver]
 
   // Parse NGINX access logs (only for nginx container)
   stage.match {
@@ -552,13 +571,19 @@ loki.write "loki" {
   }
 }
 
+loki.write "victorialogs" {
+  endpoint {
+    url = "http://victoria-logs:9428/insert/loki/api/v1/push?_stream_fields=job,compose_project,compose_service"
+  }
+}
+
 // ============================================================================
 // ALLOY SELF MONITORING
 // ============================================================================
 prometheus.exporter.self "alloy" {}
 
 prometheus.relabel "alloy_self_labels" {
-  forward_to = [prometheus.remote_write.prometheus.receiver]
+  forward_to = [prometheus.remote_write.prometheus.receiver, prometheus.remote_write.victoriametrics.receiver]
 
   rule {
     action       = "replace"

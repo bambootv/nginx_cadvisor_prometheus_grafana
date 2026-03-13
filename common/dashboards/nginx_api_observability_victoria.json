@@ -52,7 +52,7 @@
             "targets": [
                 {
                     "refId": "A",
-                    "expr": "sum(vlogs_nginx_requests_rate{resp_code=~\"$resp_code\"})",
+                    "expr": "sum(vlogs_nginx_requests_rate)",
                     "legendFormat": "RPS",
                     "range": true
                 }
@@ -92,7 +92,7 @@
             "targets": [
                 {
                     "refId": "A",
-                    "expr": "sum(sum_over_time(vlogs_nginx_requests_total_15s{resp_code=~\"$resp_code\"}[$__range]))",
+                    "expr": "sum(sum_over_time(vlogs_nginx_requests_total_15s[$__range]))",
                     "legendFormat": "Requests",
                     "range": true
                 }
@@ -118,7 +118,7 @@
         {
             "id": 3,
             "type": "gauge",
-            "title": "5xx Error % (range)",
+            "title": "5xx Error % (requires resp_code label)",
             "gridPos": {
                 "h": 4,
                 "w": 6,
@@ -132,7 +132,7 @@
             "targets": [
                 {
                     "refId": "A",
-                    "expr": "(sum(sum_over_time(vlogs_nginx_requests_total_15s{resp_code=~\"5..\"}[$__range])) / clamp_min(sum(sum_over_time(vlogs_nginx_requests_total_15s{resp_code=~\"$resp_code\"}[$__range])), 1)) * 100",
+                    "expr": "0",
                     "legendFormat": "5xx%",
                     "range": true
                 }
@@ -176,7 +176,7 @@
         {
             "id": 4,
             "type": "timeseries",
-            "title": "RPS by Status",
+            "title": "RPS (total)",
             "gridPos": {
                 "h": 8,
                 "w": 24,
@@ -190,8 +190,8 @@
             "targets": [
                 {
                     "refId": "A",
-                    "expr": "sum by (resp_code) (vlogs_nginx_requests_rate)",
-                    "legendFormat": "{{resp_code}}",
+                    "expr": "sum(vlogs_nginx_requests_rate)",
+                    "legendFormat": "RPS",
                     "range": true
                 }
             ],
@@ -239,13 +239,13 @@
             "targets": [
                 {
                     "refId": "A",
-                    "expr": "max(vlogs_nginx_request_duration_seconds_overall{stats_result=\"p95\", resp_code=~\"$resp_code\"})",
+                    "expr": "max(vlogs_nginx_request_duration_seconds_overall{stats_result=\"p95\"})",
                     "legendFormat": "p95",
                     "range": true
                 },
                 {
                     "refId": "B",
-                    "expr": "max(vlogs_nginx_request_duration_seconds_overall{stats_result=\"p99\", resp_code=~\"$resp_code\"})",
+                    "expr": "max(vlogs_nginx_request_duration_seconds_overall{stats_result=\"p99\"})",
                     "legendFormat": "p99",
                     "range": true
                 }
@@ -294,7 +294,7 @@
             "targets": [
                 {
                     "refId": "A",
-                    "expr": "topk($topk, sum by (request) (sum_over_time(vlogs_nginx_requests_total_1m{request=~\".*/api.*\", resp_code=~\"$resp_code\"}[$__range])))",
+                    "expr": "topk($topk, sum by (request) (sum_over_time(vlogs_nginx_requests_total_1m[$__range])))",
                     "legendFormat": "{{request}}",
                     "range": true
                 }
@@ -326,7 +326,7 @@
             "targets": [
                 {
                     "refId": "A",
-                    "expr": "topk($topk, max_over_time(vlogs_nginx_request_duration_seconds{stats_result=\"p95\", resp_code=~\"$resp_code\", request=~\".*/api.*\"}[$__range]))",
+                    "expr": "topk($topk, max_over_time(vlogs_nginx_request_duration_seconds{stats_result=\"p95\"}[$__range]))",
                     "legendFormat": "{{request}}",
                     "range": true
                 }
@@ -371,7 +371,7 @@
             "targets": [
                 {
                     "refId": "A",
-                    "expr": "topk(50, sum by (country_name) (sum_over_time(vlogs_nginx_requests_total_by_country{resp_code=~\"$resp_code\"}[$__range])))",
+                    "expr": "topk(50, sum by (country_name) (sum_over_time(vlogs_nginx_requests_total_by_country[$__range])))",
                     "legendFormat": "{{country_name}}",
                     "range": true
                 }
@@ -397,29 +397,6 @@
     ],
     "templating": {
         "list": [
-            {
-                "name": "resp_code",
-                "type": "query",
-                "label": "HTTP Status",
-                "datasource": {
-                    "type": "prometheus",
-                    "uid": "victoriametrics"
-                },
-                "query": {
-                    "query": "label_values(vlogs_nginx_requests_rate, resp_code)",
-                    "refId": "StandardVariableQuery"
-                },
-                "definition": "label_values(vlogs_nginx_requests_rate, resp_code)",
-                "refresh": 2,
-                "multi": true,
-                "includeAll": true,
-                "allValue": ".*",
-                "current": {
-                    "selected": true,
-                    "text": "All",
-                    "value": ".*"
-                }
-            },
             {
                 "name": "topk",
                 "type": "custom",

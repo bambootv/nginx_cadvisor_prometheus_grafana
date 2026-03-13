@@ -20,8 +20,8 @@ groups:
       # Latency quantiles derived directly from raw log message (last quoted field is $request_time)
       # Emits one timeseries per quantile via the stats_result label (p50/p90/p99)
       - record: vlogs_nginx_request_duration_seconds
-        expr: '_time:5m {job="nginx"} | extract_regexp ''"(?P<req_time>\\d+\\.\\d+)"$'' | stats by (job, request, resp_code) quantile(0.5, req_time) p50, quantile(0.9, req_time) p90, quantile(0.95, req_time) p95, quantile(0.99, req_time) p99'
+        expr: '_time:5m {job="nginx"} | extract_regexp "\\\"(?P<req_time>\\d+\\.\\d+)\\\"$" | stats by (job, request, resp_code) quantile(0.5, req_time) p50, quantile(0.9, req_time) p90, quantile(0.95, req_time) p95, quantile(0.99, req_time) p99'
 
       # Overall latency quantiles across all requests (no request label)
       - record: vlogs_nginx_request_duration_seconds_overall
-        expr: '_time:5m {job="nginx"} | extract_regexp ''"(?P<req_time>\\d+\\.\\d+)"$'' | stats by (job, resp_code) quantile(0.5, req_time) p50, quantile(0.9, req_time) p90, quantile(0.95, req_time) p95, quantile(0.99, req_time) p99'
+        expr: '_time:5m {job="nginx"} | extract_regexp "\\\"(?P<req_time>\\d+\\.\\d+)\\\"$" | stats by (job, resp_code) quantile(0.5, req_time) p50, quantile(0.9, req_time) p90, quantile(0.95, req_time) p95, quantile(0.99, req_time) p99'

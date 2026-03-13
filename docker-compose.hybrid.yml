@@ -72,11 +72,11 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
       # --- Linux Production ONLY (Uncomment when running on Linux managers/workers) ---
-      # - /:/rootfs:ro
-      # - /sys:/sys:ro
-      # - /var/lib/docker:/var/lib/docker:ro
-      # - /dev/disk/:/dev/disk:ro
-      # - /sys/fs/cgroup:/sys/fs/cgroup:ro
+      - /:/rootfs:ro
+      - /sys:/sys:ro
+      - /var/lib/docker:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+      - /sys/fs/cgroup:/sys/fs/cgroup:ro
     command:
       - run
       - /etc/alloy/config.alloy
@@ -138,8 +138,9 @@ services:
     command:
       - "-httpListenAddr=:8880"
       - "-datasource.url=http://victoria-logs:9428"
-      - "-remoteWrite.url=http://prometheus:9090/api/v1/write"
-      - "-remoteWrite.url=http://victoria-metrics:8428/api/v1/write"
+      # vmalert auto-appends /api/v1/write by default
+      - "-remoteWrite.url=http://prometheus:9090"
+      - "-remoteWrite.url=http://victoria-metrics:8428"
       - "-evaluationInterval=15s"
       - "-rule.defaultRuleType=vlogs"
       - "-rule=/etc/vmalert/rules/*.yml"

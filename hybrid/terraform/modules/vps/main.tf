@@ -89,9 +89,17 @@ resource "grafana_folder" "vps_folder" {
   title = "VPS Monitoring (${var.vps_name})"
 }
 
+locals {
+  dashboards_dir = "${path.module}/../../../../common/dashboards"
+  dashboards = {
+    for f in fileset(local.dashboards_dir, "*.json") :
+    f => jsondecode(file("${local.dashboards_dir}/${f}"))
+  }
+}
+
 # 4. Deploy Dashboards to this Folder
 resource "grafana_dashboard" "dashboards" {
-  for_each = fileset("${path.module}/../../../../common/dashboards", "*.json")
+  for_each = local.dashboards
 
   folder = grafana_folder.vps_folder.id
 
@@ -103,8 +111,8 @@ resource "grafana_dashboard" "dashboards" {
         replace(
           replace(
             replace(
-            file("${path.module}/../../../../common/dashboards/${each.key}"),
-            "\"uid\": \"loki\"", "\"uid\": \"${grafana_data_source.loki.uid}\""
+              file("${local.dashboards_dir}/${each.key}"),
+              "\"uid\": \"loki\"", "\"uid\": \"${grafana_data_source.loki.uid}\""
             ),
             "\"uid\": \"victorialogs\"", "\"uid\": \"${grafana_data_source.victorialogs.uid}\""
           ),
@@ -114,7 +122,9 @@ resource "grafana_dashboard" "dashboards" {
       )
     ),
     {
-      uid = "${jsondecode(file("${path.module}/../../../../common/dashboards/${each.key}")).uid}-${var.vps_name}"
+      # Grafana dashboard UID max length is 40 chars.
+      # Keep the readable UID when it fits; otherwise fall back to a stable short hash.
+      uid = length("${each.value.uid}-${var.vps_name}") <= 40 ? "${each.value.uid}-${var.vps_name}" : substr(md5("${each.value.uid}-${var.vps_name}"), 0, 32)
     }
   ))
 }

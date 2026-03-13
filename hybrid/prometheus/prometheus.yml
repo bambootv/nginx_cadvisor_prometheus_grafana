@@ -8,4 +8,3 @@ global:
 # Alloy push metrics qua remote_write (system / container / nginx / access logs)
 # Prometheus chỉ cần scrape Alloy self-metrics (optional)
 # ============================================================================
-

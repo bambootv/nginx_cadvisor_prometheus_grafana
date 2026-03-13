@@ -94,8 +94,8 @@ services:
       - 3102:3102
     command: -config.file=/etc/loki/config.yaml
     volumes:
-      - ./selfhost/loki/config.yaml:/etc/loki/config.yaml:ro
-      - ./selfhost/loki/rules_source:/loki/rules_source:ro  # Rules tĩnh từ source code (read-only)
+      - ./hybrid/loki/config.yaml:/etc/loki/config.yaml:ro
+      - ./hybrid/loki/rules_source:/loki/rules_source:ro  # Rules tĩnh từ source code (read-only)
       - loki_rules_storage:/loki/rules_storage    # Rules động từ API (read-write)
       - loki_data:/loki
     networks:
@@ -123,7 +123,7 @@ services:
       - '--web.enable-lifecycle'
       - '--web.enable-remote-write-receiver'
     volumes:
-      - ./selfhost/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./hybrid/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - prometheus_data:/prometheus
     networks:
       - monitoring_swarm_hybrid

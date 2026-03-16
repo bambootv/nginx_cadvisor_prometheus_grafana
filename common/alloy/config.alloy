@@ -8,7 +8,7 @@ logging {
 // ============================================================================
 prometheus.remote_write "prometheus" {
   endpoint {
-    url = env("GRAFANA_CLOUD_PROM_URL")
+    url = coalesce(sys.env("CENTRAL_PROM_URL"), "")
 
     queue_config {
       capacity             = 15000
@@ -21,8 +21,8 @@ prometheus.remote_write "prometheus" {
     }
 
     basic_auth {
-      username = env("GRAFANA_CLOUD_PROM_USER")
-      password = env("GRAFANA_CLOUD_API_KEY")
+      username = coalesce(sys.env("CENTRAL_PROM_USER"), "")
+      password = coalesce(sys.env("CENTRAL_PROM_PASSWORD"), "")
     }
 
     // Write-Ahead-Log for reliability
@@ -69,7 +69,12 @@ prometheus.relabel "system" {
 
   rule {
     target_label = "instance"
-    replacement  = "alloy:12345"
+    replacement  = coalesce(sys.env("VPS_NAME"), sys.env("HOSTNAME"), "unknown")
+  }
+
+  rule {
+    target_label = "vps"
+    replacement  = coalesce(sys.env("VPS_NAME"), sys.env("HOSTNAME"), "unknown")
   }
 
   // Drop loop/ram disk devices (diskstats)
@@ -108,7 +113,12 @@ prometheus.relabel "cadvisor" {
 
   rule {
     target_label = "instance"
-    replacement  = "alloy:12345"
+    replacement  = coalesce(sys.env("VPS_NAME"), sys.env("HOSTNAME"), "unknown")
+  }
+
+  rule {
+    target_label = "vps"
+    replacement  = coalesce(sys.env("VPS_NAME"), sys.env("HOSTNAME"), "unknown")
   }
 
   rule {
@@ -315,6 +325,7 @@ loki.source.docker "containers" {
   refresh_interval = "10s"
   labels = {
     job = "docker_containers",
+    vps = coalesce(sys.env("VPS_NAME"), sys.env("HOSTNAME"), "unknown"),
   }
   // Forward đến 2 pipelines: logs + metrics
   forward_to = [loki.process.docker_logs.receiver, loki.process.nginx_metrics.receiver]
@@ -323,6 +334,12 @@ loki.source.docker "containers" {
 // Process để thêm log level detection và nginx log parsing
 loki.process "docker_logs" {
   forward_to = [loki.write.loki.receiver]
+
+  // Prevent Loki 400 "timestamp too old" when Alloy starts and re-reads old Docker logs.
+  stage.drop {
+    older_than          = "72h"
+    drop_counter_reason = "too_old_for_loki"
+  }
 
   // Parse NGINX access logs (only for nginx container)
   stage.match {
@@ -462,6 +479,12 @@ loki.process "docker_logs" {
 loki.process "nginx_metrics" {
   forward_to = []  // Không forward logs, chỉ tạo metrics
 
+  // Keep metrics pipeline lightweight on first start (avoid processing very old logs).
+  stage.drop {
+    older_than          = "72h"
+    drop_counter_reason = "too_old_for_metrics"
+  }
+
   stage.match {
     selector = "{compose_service=~\"(.*_)?nginx\"}"
 
@@ -543,11 +566,11 @@ loki.process "nginx_metrics" {
 
 loki.write "loki" {
   endpoint {
-    url = env("GRAFANA_CLOUD_LOKI_URL")
+    url = coalesce(sys.env("CENTRAL_LOKI_URL"), "")
 
     basic_auth {
-      username = env("GRAFANA_CLOUD_LOKI_USER")
-      password = env("GRAFANA_CLOUD_API_KEY")
+      username = coalesce(sys.env("CENTRAL_LOKI_USER"), "")
+      password = coalesce(sys.env("CENTRAL_LOKI_PASSWORD"), "")
     }
   }
 }
@@ -563,7 +586,13 @@ prometheus.relabel "alloy_self_labels" {
   rule {
     action       = "replace"
     target_label = "instance"
-    replacement  = "alloy:12345"
+    replacement  = coalesce(sys.env("VPS_NAME"), sys.env("HOSTNAME"), "unknown")
+  }
+
+  rule {
+    action       = "replace"
+    target_label = "vps"
+    replacement  = coalesce(sys.env("VPS_NAME"), sys.env("HOSTNAME"), "unknown")
   }
 
   rule {

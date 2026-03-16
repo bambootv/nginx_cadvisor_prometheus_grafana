@@ -1,28 +1,29 @@
-# Nginx Monitoring Stack (Hybrid)
+# Nginx Monitoring Stack (Centralized)
 
-Stack giám sát Nginx trên Docker Swarm theo mô hình **Hybrid (Multi-VPS)**:
+Stack giám sát Nginx theo mô hình **Centralized (Multi-VPS qua Tailscale)**:
 
-- Mỗi VPS chạy: **Nginx + Grafana Alloy + Prometheus + Loki + PDC Agent**
-- Dữ liệu (Prom/Loki) lưu local trên từng VPS
-- Dashboard tập trung trên **Grafana Cloud** thông qua **Private Data Source Connect (PDC)**
+- **Central VPS**: chạy **Prometheus + Loki + Grafana** (tập trung dữ liệu + vẽ dashboard)
+- **Common VPS** (mỗi VPS ứng dụng): chạy **Nginx + Grafana Alloy** (thu thập metrics/logs và đẩy về Central)
+- Kết nối giữa các VPS qua **Tailscale** (không mở public Prometheus/Loki/Grafana)
 
 ## 📂 Cấu trúc dự án
 
-- `docker-compose.hybrid.yml`: Compose cho chế độ Hybrid (Swarm stack)
-- `common/`: thành phần dùng chung
+- `docker-compose.central.yml`: Swarm stack cho **Central** (Prometheus + Loki + Grafana)
+- `docker-compose.common.yml`: Swarm stack cho **Common** (Nginx + Alloy)
+- `central/`: thành phần chạy trên Central VPS
+  - `central/prometheus/`: cấu hình Prometheus
+  - `central/loki/`: cấu hình Loki + rules
+  - `central/grafana/`: provisioning datasources + dashboards
+  - `central/dashboards/`: dashboard JSON (Grafana auto-load khi start)
+- `common/`: thành phần dùng chung cho Common
   - `common/alloy/`: cấu hình Grafana Alloy (metrics + logs)
   - `common/nginx/`: cấu hình Nginx
-  - `common/dashboards/`: dashboard JSON (được Terraform upload lên Cloud)
-- `hybrid/`: thành phần chỉ dùng cho Hybrid
-  - `hybrid/prometheus/`: cấu hình Prometheus local
-  - `hybrid/loki/`: cấu hình Loki + rules
-  - `hybrid/terraform/`: tạo Folder/Datasource/Dashboard trên Grafana Cloud
 
 ## 🛠 Yêu cầu
 
 - Docker + Docker Swarm mode
 - `make`
-- Có tài khoản Grafana Cloud (để dùng PDC + API token)
+- Tailscale (Central + mọi Common VPS, bật MagicDNS)
 
 ## ✅ Chuẩn bị
 
@@ -32,80 +33,56 @@ Stack giám sát Nginx trên Docker Swarm theo mô hình **Hybrid (Multi-VPS)**:
 
 2. Tạo file môi trường:
    - `cp .env.example .env`
-   - Điền các biến Hybrid (PDC + Terraform) trong `.env`
+  - Điền các biến cần thiết trong `.env` (Grafana admin, endpoint đẩy dữ liệu về Central, ...)
 
-## 🌐 Hybrid (Multi-VPS)
+## 🚀 Deploy
 
-### 1) Tạo PDC Cluster trên Grafana Cloud
-
-- Grafana Cloud → Connections → Private Data Source Connect
-- Tạo cluster mới và lấy: `Token`, `Cluster ID`, `Hosted Grafana ID`
-
-### 2) Tạo Service Account Token (cho Terraform)
-
-- Grafana Cloud → Administration → Service Accounts
-- Tạo token (Admin/Editor) và set vào `TF_VAR_grafana_auth`
-
-### 3) Khởi chạy Terraform (tạo Datasource/Dashboard trên Cloud)
-
-```bash
-make hybrid_terraform_init
-make hybrid_terraform_apply
-```
-
-Terraform sẽ tạo (theo `TF_VAR_vps_name`):
-- Folder: `VPS Monitoring (<vps_name>)`
-- Datasource: `Prometheus-<vps_name>`, `Loki-<vps_name>`
-- Dashboards: System Monitoring, Nginx API Observability, Container Logs
-
-### 4) Bật PDC cho Datasource (thủ công 1 lần)
-
-- Grafana Cloud → Connections → Data Sources
-- Chọn datasource `Prometheus-<vps_name>` → phần “Connect via private data source connect” → chọn cluster → Save & Test
-- Lặp lại với `Loki-<vps_name>`
-
-### 5) Deploy stack lên VPS
+### Central VPS (Prometheus + Loki + Grafana)
 
 Khởi tạo Swarm (chạy 1 lần nếu VPS chưa init):
 ```bash
 make swarm
 ```
 
-Deploy full stack (Nginx + Monitoring):
+Deploy Central stack:
 ```bash
-make stack_full_hybrid
+make stack_central
 ```
 
-Deploy chỉ Nginx:
+### Common VPS (Nginx + Alloy)
+
+Khởi tạo Swarm (chạy 1 lần nếu VPS chưa init):
 ```bash
-make stack_nginx_hybrid
+make swarm
 ```
 
-Reload Nginx sau khi đổi config:
+Deploy Common stack:
 ```bash
-make deploy_nginx_hybrid
+make stack_common
 ```
 
 ## 🔎 Truy cập dịch vụ
 
-- Nginx Website: `http://<VPS_IP>:80`
-- Alloy UI: `http://<VPS_IP>:12345`
-- Prometheus (local VPS): `http://<VPS_IP>:9090`
-- Loki (local VPS): `http://<VPS_IP>:3102`
-- Grafana Cloud: `https://<your-stack>.grafana.net` → folder `VPS Monitoring (<vps_name>)`
+- Common VPS
+  - Nginx Website: `http://<COMMON_VPS_IP>:80`
+  - Alloy UI: `http://<COMMON_VPS_IP>:12345`
+- Central VPS (truy cập qua Tailscale MagicDNS / Tailscale IP)
+  - Grafana: `http://<CENTRAL_TAILSCALE_HOST>:3000`
+  - Prometheus: `http://<CENTRAL_TAILSCALE_HOST>:9090`
+  - Loki: `http://<CENTRAL_TAILSCALE_HOST>:3102`
 
 ## ⚙️ Thao tác chung
 
-- Xem service trong stack:
-  - `docker stack services monitoring_hybrid`
-- Xem logs:
-  - `docker service logs -f monitoring_hybrid_nginx`
-  - `docker service logs -f monitoring_hybrid_alloy`
-- Gỡ stack:
-  - `docker stack rm monitoring_hybrid`
+- Central
+  - Xem services: `docker stack services monitoring_central`
+  - Xem logs: `docker service logs -f monitoring_central_grafana`
+- Common
+  - Xem services: `docker stack services monitoring_common`
+  - Reload Nginx: `make deploy_common_nginx`
+  - Reload Alloy: `make deploy_common_alloy`
 
 ## 🧭 Tài liệu
 
 - `docs/vision-simple.md`
 - `docs/vision-workshop.md`
-- `docs/monitoring-options-comparison.md`
+- `docs/centralized-vps.md`

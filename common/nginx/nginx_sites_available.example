@@ -93,6 +93,11 @@ server {
 	listen 80 default_server;
 	server_name  localhost;
 
+	# Project identifier for observability.
+	# NOTE: For multi-project setups, set this per domain/server block and keep it
+	# identical to the Swarm stack name of that project.
+	set $project "default";
+
 	location / {
 		root   html;
 		index  index.html index.htm;
@@ -118,6 +123,9 @@ server {
     listen 80;
 	# access_log off; # if don't want get logs
     server_name your_domain.com;
+
+	# Project identifier for observability (should match your Swarm stack name)
+	set $project "your_stack_name";
 
 	# Socket
     location /socket.io/ {
@@ -146,6 +154,9 @@ server {
 server {
     listen 80;
     server_name monitoring.your_domain.com;
+
+	# Project identifier for observability
+	set $project "monitoring";
 
     location / {
             proxy_pass http://172.17.0.1:3456;

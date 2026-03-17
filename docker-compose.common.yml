@@ -48,7 +48,7 @@ services:
         max-file: "3"
 
   alloy:
-    image: grafana/alloy:v1.11.1
+    image: grafana/alloy:v1.14.0
     ports:
       - "12345:12345"
     env_file:
@@ -62,6 +62,7 @@ services:
       - /:/host/root:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /run/containerd:/run/containerd:ro
       # --- Linux Production ONLY (Uncomment when running on Linux managers/workers) ---
       - /:/rootfs:ro
       - /sys:/sys:ro

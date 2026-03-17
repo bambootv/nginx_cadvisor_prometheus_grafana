@@ -147,24 +147,47 @@ prometheus.relabel "cadvisor" {
 
   // Extract Service Name (Swarm > Compose)
   rule {
-    source_labels = ["container_label_com_docker_swarm_service_name"]
+    source_labels = ["container_label_com_docker_compose_service"]
     target_label  = "service"
+    regex         = "(.+)"
+    replacement   = "$1"
   }
 
   rule {
-    source_labels = ["container_label_com_docker_compose_service"]
+    source_labels = ["container_label_com_docker_swarm_service_name"]
     target_label  = "service"
+    regex         = "(.+)"
+    replacement   = "$1"
   }
 
   // Extract Stack/Project Name
   rule {
-    source_labels = ["container_label_com_docker_stack_namespace"]
+    source_labels = ["container_label_com_docker_compose_project"]
     target_label  = "stack"
+    regex         = "(.+)"
+    replacement   = "$1"
   }
 
   rule {
+    source_labels = ["container_label_com_docker_stack_namespace"]
+    target_label  = "stack"
+    regex         = "(.+)"
+    replacement   = "$1"
+  }
+
+  // Unified project label (Swarm stack name > Compose project)
+  rule {
     source_labels = ["container_label_com_docker_compose_project"]
     target_label  = "project"
+    regex         = "(.+)"
+    replacement   = "$1"
+  }
+
+  rule {
+    source_labels = ["container_label_com_docker_stack_namespace"]
+    target_label  = "project"
+    regex         = "(.+)"
+    replacement   = "$1"
   }
 
   // ==========================================================================
@@ -300,6 +323,25 @@ discovery.relabel "docker_logs" {
     action        = "replace"
   }
 
+  // ==========================================================================
+  // PROJECT - Unified project label (Swarm stack name > Compose project)
+  // ==========================================================================
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_project"]
+    target_label  = "project"
+    regex         = "(.+)"
+    replacement   = "$1"
+    action        = "replace"
+  }
+
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_stack_namespace"]
+    target_label  = "project"
+    regex         = "(.+)"
+    replacement   = "$1"
+    action        = "replace"
+  }
+
   // Swarm task name
   rule {
     source_labels = ["__meta_docker_container_label_com_docker_swarm_task_name"]
@@ -346,7 +388,7 @@ loki.process "docker_logs" {
     selector = "{compose_service=~\"(.*_)?nginx\"}"
 
     stage.regex {
-      expression = "^(?P<client>\\S+) (?P<ident>\\S+) (?P<auth>\\S+) \\[(?P<timestamp>[^\\]]+)\\] \"(?P<verb>\\S+) (?P<request>[^\"]+) (?P<httpversion>\\S+)\" (?P<status>\\d+) (?P<response>\\d+) \"(?P<referrer>[^\"]*)\" \"(?P<agent>[^\"]*)\" \"(?P<req_time>\\d+\\.\\d+)\"$"
+      expression = "^(?P<client>\\S+) (?P<ident>\\S+) (?P<auth>\\S+) \\[(?P<timestamp>[^\\]]+)\\] \"(?P<verb>\\S+) (?P<request>[^\"]+) (?P<httpversion>\\S+)\" (?P<status>\\d+) (?P<response>\\d+) \"(?P<referrer>[^\"]*)\" \"(?P<agent>[^\"]*)\" \"(?P<project>[^\"]*)\" \"(?P<host>[^\"]*)\" \"(?P<req_time>\\d+\\.\\d+)\"$"
     }
 
     stage.geoip {
@@ -436,6 +478,11 @@ loki.process "docker_logs" {
       template = "{{ if hasPrefix \"2\" .status }}2xx{{ else if hasPrefix \"3\" .status }}3xx{{ else if hasPrefix \"4\" .status }}4xx{{ else if hasPrefix \"5\" .status }}5xx{{ else }}other{{ end }}"
     }
 
+    stage.template {
+      source   = "final_project"
+      template = "{{ if and .project (ne .project \"-\") }}{{ .project }}{{ else if and .host (ne .host \"-\") }}{{ .host }}{{ else }}unknown{{ end }}"
+    }
+
     // 7. Labels cho Loki (sử dụng final_request đã xử lý)
     stage.labels {
       values = {
@@ -443,6 +490,8 @@ loki.process "docker_logs" {
         request      = "final_request",
         resp_code    = "final_status",
         country_name = "final_country_name",
+        project      = "final_project",
+        host         = "host",
       }
     }
 
@@ -450,6 +499,22 @@ loki.process "docker_logs" {
       values = {
         job = "nginx",
       }
+    }
+
+    // Loki has a default limit on the number of label *names* per stream.
+    // Nginx access logs inherit many Docker/Swarm infra labels; dropping the
+    // ones we don't use prevents HTTP 400 "too many labels" and data loss.
+    stage.label_drop {
+      values = [
+        "container",
+        "container_id",
+        "task",
+        "node_id",
+        "service",
+        "service_name",
+        "compose_project",
+        "image",
+      ]
     }
 
     // KHÔNG tạo metrics ở đây nữa - chuyển sang pipeline riêng
@@ -489,7 +554,7 @@ loki.process "nginx_metrics" {
     selector = "{compose_service=~\"(.*_)?nginx\"}"
 
     stage.regex {
-      expression = "^(?P<client>\\S+) (?P<ident>\\S+) (?P<auth>\\S+) \\[(?P<timestamp>[^\\]]+)\\] \"(?P<verb>\\S+) (?P<request>[^\"]+) (?P<httpversion>\\S+)\" (?P<status>\\d+) (?P<response>\\d+) \"(?P<referrer>[^\"]*)\" \"(?P<agent>[^\"]*)\" \"(?P<req_time>\\d+\\.\\d+)\"$"
+      expression = "^(?P<client>\\S+) (?P<ident>\\S+) (?P<auth>\\S+) \\[(?P<timestamp>[^\\]]+)\\] \"(?P<verb>\\S+) (?P<request>[^\"]+) (?P<httpversion>\\S+)\" (?P<status>\\d+) (?P<response>\\d+) \"(?P<referrer>[^\"]*)\" \"(?P<agent>[^\"]*)\" \"(?P<project>[^\"]*)\" \"(?P<host>[^\"]*)\" \"(?P<req_time>\\d+\\.\\d+)\"$"
     }
 
     // Normalize request path (chỉ cho metrics - luôn normalize)
@@ -536,11 +601,17 @@ loki.process "nginx_metrics" {
       template = "{{ if hasPrefix \"2\" .status }}2xx{{ else if hasPrefix \"3\" .status }}3xx{{ else if hasPrefix \"4\" .status }}4xx{{ else if hasPrefix \"5\" .status }}5xx{{ else }}other{{ end }}"
     }
 
+    stage.template {
+      source   = "final_project"
+      template = "{{ if and .project (ne .project \"-\") }}{{ .project }}{{ else if and .host (ne .host \"-\") }}{{ .host }}{{ else }}unknown{{ end }}"
+    }
+
     // Labels tối thiểu cho metrics
     stage.labels {
       values = {
         request   = "request_path",
         resp_code = "final_status",
+        project   = "final_project",
       }
     }
 

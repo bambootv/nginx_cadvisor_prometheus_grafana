@@ -97,7 +97,7 @@
                         "uid": "prometheus"
                     },
                     "editorMode": "code",
-                    "expr": "100 - (avg(rate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100)",
+                    "expr": "100 - (avg(rate(node_cpu_seconds_total{mode=\"idle\", vps=~\"$vps\"}[5m])) * 100)",
                     "legendFormat": "__auto",
                     "instant": true,
                     "range": false,
@@ -169,7 +169,7 @@
                         "uid": "prometheus"
                     },
                     "editorMode": "code",
-                    "expr": "avg(100 * (1 - ((avg_over_time(node_memory_MemAvailable_bytes[5m]) or (avg_over_time(node_memory_Buffers_bytes[5m]) + avg_over_time(node_memory_Cached_bytes[5m]) + avg_over_time(node_memory_MemFree_bytes[5m]))) / avg_over_time(node_memory_MemTotal_bytes[5m]))))",
+                    "expr": "avg(100 * (1 - ((avg_over_time(node_memory_MemAvailable_bytes{vps=~\"$vps\"}[5m]) or (avg_over_time(node_memory_Buffers_bytes{vps=~\"$vps\"}[5m]) + avg_over_time(node_memory_Cached_bytes{vps=~\"$vps\"}[5m]) + avg_over_time(node_memory_MemFree_bytes{vps=~\"$vps\"}[5m]))) / avg_over_time(node_memory_MemTotal_bytes{vps=~\"$vps\"}[5m]))))",
                     "legendFormat": "__auto",
                     "instant": true,
                     "range": false,
@@ -241,7 +241,7 @@
                         "uid": "prometheus"
                     },
                     "editorMode": "code",
-                    "expr": "avg(100 - ((node_filesystem_avail_bytes{device=\"/dev/vda1\"} / node_filesystem_size_bytes{device=\"/dev/vda1\"}) * 100))",
+                    "expr": "avg(100 - ((node_filesystem_avail_bytes{mountpoint=\"/\", fstype!~\"tmpfs|overlay\", vps=~\"$vps\"} / node_filesystem_size_bytes{mountpoint=\"/\", fstype!~\"tmpfs|overlay\", vps=~\"$vps\"}) * 100))",
                     "legendFormat": "__auto",
                     "instant": true,
                     "range": false,
@@ -334,7 +334,7 @@
                         "uid": "prometheus"
                     },
                     "editorMode": "code",
-                    "expr": "avg(node_load1)",
+                    "expr": "avg(node_load1{vps=~\"$vps\"})",
                     "legendFormat": "1m",
                     "range": true,
                     "refId": "A"
@@ -345,7 +345,7 @@
                         "uid": "prometheus"
                     },
                     "editorMode": "code",
-                    "expr": "avg(node_load5)",
+                    "expr": "avg(node_load5{vps=~\"$vps\"})",
                     "legendFormat": "5m",
                     "range": true,
                     "refId": "B"
@@ -356,7 +356,7 @@
                         "uid": "prometheus"
                     },
                     "editorMode": "code",
-                    "expr": "avg(node_load15)",
+                    "expr": "avg(node_load15{vps=~\"$vps\"})",
                     "legendFormat": "15m",
                     "range": true,
                     "refId": "C"
@@ -451,7 +451,7 @@
                         "uid": "prometheus"
                     },
                     "editorMode": "code",
-                    "expr": "100 - (avg(rate(node_cpu_seconds_total{mode=\"idle\"}[$__rate_interval])) * 100)",
+                    "expr": "100 - (avg(rate(node_cpu_seconds_total{mode=\"idle\", vps=~\"$vps\"}[$__rate_interval])) * 100)",
                     "legendFormat": "CPU Used",
                     "range": true,
                     "refId": "A",
@@ -463,7 +463,7 @@
                         "uid": "prometheus"
                     },
                     "editorMode": "code",
-                    "expr": "avg(rate(node_cpu_seconds_total{mode=\"iowait\"}[$__rate_interval])) * 100",
+                    "expr": "avg(rate(node_cpu_seconds_total{mode=\"iowait\", vps=~\"$vps\"}[$__rate_interval])) * 100",
                     "legendFormat": "IO Wait",
                     "range": true,
                     "refId": "B",
@@ -475,7 +475,7 @@
                         "uid": "prometheus"
                     },
                     "editorMode": "code",
-                    "expr": "avg(rate(node_cpu_seconds_total{mode=\"system\"}[$__rate_interval])) * 100",
+                    "expr": "avg(rate(node_cpu_seconds_total{mode=\"system\", vps=~\"$vps\"}[$__rate_interval])) * 100",
                     "legendFormat": "System",
                     "range": true,
                     "refId": "C",
@@ -487,7 +487,7 @@
                         "uid": "prometheus"
                     },
                     "editorMode": "code",
-                    "expr": "avg(rate(node_cpu_seconds_total{mode=\"user\"}[$__rate_interval])) * 100",
+                    "expr": "avg(rate(node_cpu_seconds_total{mode=\"user\", vps=~\"$vps\"}[$__rate_interval])) * 100",
                     "legendFormat": "User",
                     "range": true,
                     "refId": "D",
@@ -583,7 +583,7 @@
                         "uid": "prometheus"
                     },
                     "editorMode": "code",
-                    "expr": "(node_memory_MemTotal_bytes - node_memory_MemFree_bytes - node_memory_Buffers_bytes - node_memory_Cached_bytes) / node_memory_MemTotal_bytes * 100",
+                    "expr": "(node_memory_MemTotal_bytes{vps=~\"$vps\"} - node_memory_MemFree_bytes{vps=~\"$vps\"} - node_memory_Buffers_bytes{vps=~\"$vps\"} - node_memory_Cached_bytes{vps=~\"$vps\"}) / node_memory_MemTotal_bytes{vps=~\"$vps\"} * 100",
                     "legendFormat": "Used (App)",
                     "range": true,
                     "refId": "A"
@@ -594,7 +594,7 @@
                         "uid": "prometheus"
                     },
                     "editorMode": "code",
-                    "expr": "node_memory_Buffers_bytes / node_memory_MemTotal_bytes * 100",
+                    "expr": "node_memory_Buffers_bytes{vps=~\"$vps\"} / node_memory_MemTotal_bytes{vps=~\"$vps\"} * 100",
                     "legendFormat": "Buffers",
                     "range": true,
                     "refId": "B"
@@ -605,7 +605,7 @@
                         "uid": "prometheus"
                     },
                     "editorMode": "code",
-                    "expr": "node_memory_Cached_bytes / node_memory_MemTotal_bytes * 100",
+                    "expr": "node_memory_Cached_bytes{vps=~\"$vps\"} / node_memory_MemTotal_bytes{vps=~\"$vps\"} * 100",
                     "legendFormat": "Cached",
                     "range": true,
                     "refId": "C"
@@ -616,7 +616,7 @@
                         "uid": "prometheus"
                     },
                     "editorMode": "code",
-                    "expr": "node_memory_MemFree_bytes / node_memory_MemTotal_bytes * 100",
+                    "expr": "node_memory_MemFree_bytes{vps=~\"$vps\"} / node_memory_MemTotal_bytes{vps=~\"$vps\"} * 100",
                     "legendFormat": "Free",
                     "range": true,
                     "refId": "D"
@@ -722,7 +722,7 @@
                         "uid": "prometheus"
                     },
                     "editorMode": "code",
-                    "expr": "sum(rate(node_network_receive_bytes_total{device!~\"lo|docker.*|veth.*\"}[$__rate_interval]))",
+                    "expr": "sum(rate(node_network_receive_bytes_total{device!~\"lo|docker.*|veth.*\", vps=~\"$vps\"}[$__rate_interval]))",
                     "legendFormat": "RX Total",
                     "range": true,
                     "refId": "A",
@@ -734,7 +734,7 @@
                         "uid": "prometheus"
                     },
                     "editorMode": "code",
-                    "expr": "sum(rate(node_network_transmit_bytes_total{device!~\"lo|docker.*|veth.*\"}[$__rate_interval]))",
+                    "expr": "sum(rate(node_network_transmit_bytes_total{device!~\"lo|docker.*|veth.*\", vps=~\"$vps\"}[$__rate_interval]))",
                     "legendFormat": "TX Total",
                     "range": true,
                     "refId": "B",
@@ -841,7 +841,7 @@
                         "uid": "prometheus"
                     },
                     "editorMode": "code",
-                    "expr": "sum(rate(node_disk_reads_completed_total{device=~\"sd.*|nvme.*|vd.*\"}[$__rate_interval]))",
+                    "expr": "sum(rate(node_disk_reads_completed_total{device=~\"sd.*|nvme.*|vd.*\", vps=~\"$vps\"}[$__rate_interval]))",
                     "legendFormat": "Read Total",
                     "range": true,
                     "refId": "A",
@@ -853,7 +853,7 @@
                         "uid": "prometheus"
                     },
                     "editorMode": "code",
-                    "expr": "sum(rate(node_disk_writes_completed_total{device=~\"sd.*|nvme.*|vd.*\"}[$__rate_interval]))",
+                    "expr": "sum(rate(node_disk_writes_completed_total{device=~\"sd.*|nvme.*|vd.*\", vps=~\"$vps\"}[$__rate_interval]))",
                     "legendFormat": "Write Total",
                     "range": true,
                     "refId": "B",
@@ -946,7 +946,7 @@
                         "uid": "prometheus"
                     },
                     "editorMode": "code",
-                    "expr": "(sum(rate(container_cpu_usage_seconds_total{stack=~\"$stack\", service=~\"$service\", container=~\"$container\", image!=\"\"}[$__rate_interval])) by (container) / scalar(count(count(node_cpu_seconds_total{mode=\"idle\"}) by (cpu)))) * 100",
+                    "expr": "(sum(rate(container_cpu_usage_seconds_total{vps=~\"$vps\", image!=\"\"}[$__rate_interval])) by (container) / scalar(count(count(node_cpu_seconds_total{mode=\"idle\", vps=~\"$vps\"}) by (cpu)))) * 100",
                     "legendFormat": "{{container}}",
                     "range": true,
                     "refId": "A"
@@ -1025,7 +1025,7 @@
                         "uid": "prometheus"
                     },
                     "editorMode": "code",
-                    "expr": "(sum(container_memory_usage_bytes{stack=~\"$stack\", service=~\"$service\", container=~\"$container\", image!=\"\"}) by (container) / scalar(sum(node_memory_MemTotal_bytes))) * 100",
+                    "expr": "(sum(container_memory_usage_bytes{vps=~\"$vps\", image!=\"\"}) by (container) / scalar(sum(node_memory_MemTotal_bytes{vps=~\"$vps\"}))) * 100",
                     "legendFormat": "{{container}}",
                     "range": true,
                     "refId": "A"
@@ -1130,7 +1130,7 @@
                         "uid": "prometheus"
                     },
                     "editorMode": "code",
-                    "expr": "sum(rate(container_network_receive_bytes_total{stack=~\"$stack\", service=~\"$service\", container=~\"$container\", image!=\"\"}[$__rate_interval])) by (container)",
+                    "expr": "sum(rate(container_network_receive_bytes_total{vps=~\"$vps\", image!=\"\"}[$__rate_interval])) by (container)",
                     "legendFormat": "RX: {{container}}",
                     "range": true,
                     "refId": "A"
@@ -1141,7 +1141,7 @@
                         "uid": "prometheus"
                     },
                     "editorMode": "code",
-                    "expr": "-sum(rate(container_network_transmit_bytes_total{stack=~\"$stack\", service=~\"$service\", container=~\"$container\", image!=\"\"}[$__rate_interval])) by (container)",
+                    "expr": "-sum(rate(container_network_transmit_bytes_total{vps=~\"$vps\", image!=\"\"}[$__rate_interval])) by (container)",
                     "legendFormat": "TX: {{container}}",
                     "range": true,
                     "refId": "B"
@@ -1233,7 +1233,7 @@
                         "uid": "prometheus"
                     },
                     "editorMode": "code",
-                    "expr": "sum(rate(container_fs_reads_bytes_total{stack=~\"$stack\", service=~\"$service\", container=~\"$container\", image!=\"\"}[$__rate_interval])) by (container)",
+                    "expr": "sum(rate(container_fs_reads_bytes_total{vps=~\"$vps\", image!=\"\"}[$__rate_interval])) by (container)",
                     "legendFormat": "Read: {{container}}",
                     "range": true,
                     "refId": "A"
@@ -1244,7 +1244,7 @@
                         "uid": "prometheus"
                     },
                     "editorMode": "code",
-                    "expr": "sum(rate(container_fs_writes_bytes_total{stack=~\"$stack\", service=~\"$service\", container=~\"$container\", image!=\"\"}[$__rate_interval])) by (container)",
+                    "expr": "sum(rate(container_fs_writes_bytes_total{vps=~\"$vps\", image!=\"\"}[$__rate_interval])) by (container)",
                     "legendFormat": "Write: {{container}}",
                     "range": true,
                     "refId": "B"
@@ -1342,7 +1342,7 @@
                         "uid": "prometheus"
                     },
                     "editorMode": "code",
-                    "expr": "max(time() - container_start_time_seconds{stack=~\"$stack\", service=~\"$service\", container=~\"$container\", image!=\"\"}) by (container, image, stack, service)",
+                    "expr": "max(time() - container_start_time_seconds{vps=~\"$vps\", image!=\"\"}) by (vps, container, image, stack, service, project)",
                     "format": "table",
                     "instant": true,
                     "range": false,
@@ -1374,100 +1374,72 @@
     "refresh": "10s",
     "schemaVersion": 38,
     "style": "dark",
-    "tags": [
-        "monitoring",
-        "system",
-        "containers",
-        "infrastructure"
-    ],
-    "templating": {
-        "list": [
-            {
-                "allValue": ".*",
-                "current": {
-                    "selected": false,
-                    "text": "All",
-                    "value": "$__all"
-                },
-                "datasource": {
-                    "type": "prometheus",
-                    "uid": "prometheus"
-                },
-                "definition": "label_values(container_cpu_usage_seconds_total, stack)",
-                "hide": 0,
-                "includeAll": true,
-                "label": "Stack",
-                "multi": true,
-                "name": "stack",
-                "options": [],
-                "query": {
-                    "query": "label_values(container_cpu_usage_seconds_total, stack)",
-                    "refId": "StandardVariableQuery"
-                },
-                "refresh": 1,
-                "regex": "",
-                "skipUrlSync": false,
-                "sort": 1,
-                "type": "query"
-            },
-            {
-                "allValue": ".*",
-                "current": {
-                    "selected": false,
-                    "text": "All",
-                    "value": "$__all"
-                },
-                "datasource": {
-                    "type": "prometheus",
-                    "uid": "prometheus"
-                },
-                "definition": "label_values(container_cpu_usage_seconds_total{stack=~\"$stack\"}, service)",
-                "hide": 0,
-                "includeAll": true,
-                "label": "Service",
-                "multi": true,
-                "name": "service",
-                "options": [],
-                "query": {
-                    "query": "label_values(container_cpu_usage_seconds_total{stack=~\"$stack\"}, service)",
-                    "refId": "StandardVariableQuery"
-                },
-                "refresh": 1,
-                "regex": "",
-                "skipUrlSync": false,
-                "sort": 1,
-                "type": "query"
-            },
-            {
-                "allValue": ".*",
-                "current": {
-                    "selected": false,
-                    "text": "All",
-                    "value": "$__all"
-                },
-                "datasource": {
-                    "type": "prometheus",
-                    "uid": "prometheus"
-                },
-                "definition": "label_values(container_cpu_usage_seconds_total{stack=~\"$stack\", service=~\"$service\"}, container)",
-                "hide": 0,
-                "includeAll": true,
-                "label": "Container",
-                "multi": true,
-                "name": "container",
-                "options": [],
-                "query": {
-                    "query": "label_values(container_cpu_usage_seconds_total{stack=~\"$stack\", service=~\"$service\"}, container)",
-                    "refId": "StandardVariableQuery"
-                },
-                "refresh": 1,
-                "regex": "",
-                "skipUrlSync": false,
-                "sort": 1,
-                "type": "query"
-            }
-        ]
-    },
+	    "tags": [
+	        "monitoring",
+	        "system",
+	        "containers",
+	        "infrastructure"
+	    ],
+	    "templating": {
+	        "list": [
+	            {
+	                "allValue": ".*",
+	                "current": {
+	                    "selected": false,
+	                    "text": "All",
+	                    "value": "$__all"
+	                },
+	                "datasource": {
+	                    "type": "prometheus",
+	                    "uid": "prometheus"
+	                },
+	                "definition": "label_values(container_cpu_usage_seconds_total, project)",
+	                "hide": 2,
+	                "includeAll": true,
+	                "label": "Project",
+	                "multi": true,
+	                "name": "project",
+	                "options": [],
+	                "query": {
+	                    "query": "label_values(container_cpu_usage_seconds_total, project)",
+	                    "refId": "StandardVariableQuery"
+	                },
+	                "refresh": 1,
+	                "regex": "",
+	                "skipUrlSync": true,
+	                "sort": 1,
+	                "type": "query"
+	            },
+	            {
+	                "allValue": ".*",
+	                "current": {
+	                    "selected": false,
+	                    "text": "All",
+	                    "value": "$__all"
+	                },
+	                "datasource": {
+	                    "type": "prometheus",
+	                    "uid": "prometheus"
+	                },
+	                "definition": "label_values(container_cpu_usage_seconds_total{project=~\"$project\"}, vps)",
+	                "hide": 0,
+	                "includeAll": true,
+	                "label": "VPS",
+	                "multi": false,
+	                "name": "vps",
+	                "options": [],
+	                "query": {
+	                    "query": "label_values(container_cpu_usage_seconds_total{project=~\"$project\"}, vps)",
+	                    "refId": "StandardVariableQuery"
+	                },
+	                "refresh": 1,
+	                "regex": "",
+	                "skipUrlSync": false,
+	                "sort": 1,
+	                "type": "query"
+	            }
+	        ]
+	    },
     "time": {
         "from": "now-15m",
         "to": "now"

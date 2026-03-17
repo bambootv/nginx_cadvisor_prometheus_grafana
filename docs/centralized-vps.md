@@ -12,11 +12,12 @@ Chuyển dự án từ mô hình “hybrid/Grafana Cloud” sang mô hình **1 V
 
 - Metrics: Common Alloy → `remote_write` → Central Prometheus (`:9090/api/v1/write`)
 - Logs: Common Alloy → `loki push` → Central Loki (`:3102/loki/api/v1/push`)
-- Dashboards: lưu dạng JSON trong `central/dashboards/` và được Grafana auto-load qua provisioning.
+- Dashboards: lưu dạng JSON trong `central/dashboards/projects/` và được Grafana auto-load qua provisioning (mỗi folder = 1 project).
 
 Ghi chú quan trọng:
 
 - Mỗi Common VPS cần set `VPS_NAME` để dữ liệu không bị trùng label `instance` khi nhiều VPS đổ về Central.
+- Nếu 1 Common VPS chạy nhiều project qua 1 Nginx chung: set `set $project "<TEN_STACK>";` trong từng `server {}` để logs/metrics gắn label `project` và không bị trộn.
 
 ## Bước 1 — Tách repo (đã áp dụng trong cấu trúc)
 
@@ -26,7 +27,7 @@ Repo được tách thành 2 khối chính:
   - `central/prometheus/`
   - `central/loki/`
   - `central/grafana/` (provision datasources + dashboards)
-  - `central/dashboards/`
+  - `central/dashboards/projects/`
 - `common/` (chạy trên Common VPS)
   - `common/alloy/`
   - `common/nginx/`
@@ -63,6 +64,11 @@ Common VPS:
 ```bash
 make swarm
 make stack_common
+```
+
+Tạo dashboards cho 1 project (folder riêng trong Grafana):
+```bash
+make dashboards_project PROJECT=<TEN_STACK>
 ```
 
 ## Ghi chú

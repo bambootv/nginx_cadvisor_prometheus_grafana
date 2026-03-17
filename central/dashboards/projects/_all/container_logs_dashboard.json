@@ -105,14 +105,14 @@
                         "uid": "loki"
                     },
                     "editorMode": "code",
-                    "expr": "sum by (compose_service) (count_over_time({compose_project=~\"$compose_project\", compose_service=~\"$compose_service\", level=~\"$log_level\"}[$__interval]))",
+                    "expr": "sum by (compose_service) (count_over_time({vps=~\"$vps\", project=~\"$project|monitoring_common\", compose_service=~\"$compose_service\", level=~\"$log_level\"}[$__interval]))",
                     "queryType": "range",
                     "refId": "A",
                     "legendFormat": "{{compose_service}}",
                     "format": "time_series"
                 }
             ],
-            "title": "Log Volume - $compose_project",
+            "title": "Log Volume - $project",
             "type": "timeseries"
         },
         {
@@ -147,7 +147,7 @@
                         "uid": "loki"
                     },
                     "editorMode": "code",
-                    "expr": "{compose_project=~\"$compose_project\", compose_service=~\"$compose_service\", level=~\"$log_level\"}",
+                    "expr": "{vps=~\"$vps\", project=~\"$project|monitoring_common\", compose_service=~\"$compose_service\", level=~\"$log_level\"}",
                     "queryType": "range",
                     "refId": "A"
                 }
@@ -156,7 +156,7 @@
             "type": "logs"
         }
     ],
-    "refresh": "10s",
+    "refresh": "5m",
     "schemaVersion": 38,
     "style": "dark",
     "tags": [
@@ -181,12 +181,42 @@
                 "definition": "",
                 "hide": 0,
                 "includeAll": true,
-                "label": "Stack/Project",
+                "label": "VPS",
                 "multi": false,
-                "name": "compose_project",
+                "name": "vps",
                 "options": [],
                 "query": {
-                    "label": "compose_project",
+                    "label": "vps",
+                    "refId": "LokiVariableQueryEditor-VariableQuery",
+                    "stream": "{project=~\"$project\"}",
+                    "type": 1
+                },
+                "refresh": 1,
+                "regex": "",
+                "skipUrlSync": false,
+                "sort": 1,
+                "type": "query"
+            },
+            {
+                "allValue": ".+",
+                "current": {
+                    "selected": false,
+                    "text": "All",
+                    "value": "$__all"
+                },
+                "datasource": {
+                    "type": "loki",
+                    "uid": "loki"
+                },
+                "definition": "",
+                "hide": 0,
+                "includeAll": true,
+                "label": "Stack/Project",
+                "multi": false,
+                "name": "project",
+                "options": [],
+                "query": {
+                    "label": "project",
                     "refId": "LokiVariableQueryEditor-VariableQuery",
                     "stream": "",
                     "type": 1
@@ -218,7 +248,7 @@
                 "query": {
                     "label": "compose_service",
                     "refId": "LokiVariableQueryEditor-VariableQuery",
-                    "stream": "{compose_project=~\"$compose_project\"}",
+                    "stream": "{vps=~\"$vps\", project=~\"$project|monitoring_common\"}",
                     "type": 1
                 },
                 "refresh": 1,
@@ -248,7 +278,7 @@
                 "query": {
                     "label": "level",
                     "refId": "LokiVariableQueryEditor-VariableQuery",
-                    "stream": "{compose_project=~\"$compose_project\", compose_service=~\"$compose_service\"}",
+                    "stream": "{vps=~\"$vps\", project=~\"$project|monitoring_common\", compose_service=~\"$compose_service\"}",
                     "type": 1
                 },
                 "refresh": 1,
@@ -278,6 +308,6 @@
     "timezone": "",
     "title": "Logs",
     "uid": "container-logs",
-    "version": 1,
+    "version": 2,
     "weekStart": ""
 }

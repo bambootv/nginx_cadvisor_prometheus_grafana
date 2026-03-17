@@ -14,7 +14,8 @@ Stack giám sát Nginx theo mô hình **Centralized (Multi-VPS qua Tailscale)**:
   - `central/prometheus/`: cấu hình Prometheus
   - `central/loki/`: cấu hình Loki + rules
   - `central/grafana/`: provisioning datasources + dashboards
-  - `central/dashboards/`: dashboard JSON (Grafana auto-load khi start)
+  - `central/dashboards/projects/_all/`: dashboards template (có filter theo `project`)
+  - `central/dashboards/projects/<PROJECT>/`: dashboards theo từng project (Grafana auto-load theo folder)
 - `common/`: thành phần dùng chung cho Common
   - `common/alloy/`: cấu hình Grafana Alloy (metrics + logs)
   - `common/nginx/`: cấu hình Nginx
@@ -30,6 +31,7 @@ Stack giám sát Nginx theo mô hình **Centralized (Multi-VPS qua Tailscale)**:
 1. Cấu hình Nginx:
    - `cp common/nginx/nginx_sites_available.example common/nginx/nginx_sites_available`
    - Chỉnh `common/nginx/nginx_sites_available` theo nhu cầu
+   - Nếu 1 Nginx phục vụ nhiều dự án: trong mỗi `server {}` hãy set `set $project "<TEN_STACK_SWARM_CUA_PROJECT>";` để logs/metrics không bị trộn.
 
 2. Tạo file môi trường:
    - `cp .env.example .env`
@@ -59,6 +61,29 @@ make swarm
 Deploy Common stack:
 ```bash
 make stack_common
+```
+
+## 📊 Dashboards theo project (Grafana folder)
+
+Tạo folder dashboards cho 1 project (khuyến nghị dùng đúng tên Swarm stack):
+```bash
+make dashboards_project PROJECT=<TEN_STACK>
+```
+Lưu ý: target này sẽ luôn overwrite dashboards trong folder project để đồng bộ theo templates mới nhất.
+
+Nếu muốn khóa luôn `System Operating` vào một VPS cụ thể:
+```bash
+make dashboards_project PROJECT=<TEN_STACK> VPS=<TEN_VPS>
+```
+
+Regenerate lại tất cả project folders đã có sẵn từ templates:
+```bash
+make dashboards_sync_all
+```
+
+Nếu muốn Grafana nhận thay đổi ngay:
+```bash
+make deploy_central_grafana
 ```
 
 ## 🔎 Truy cập dịch vụ

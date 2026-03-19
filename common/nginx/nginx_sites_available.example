@@ -125,11 +125,25 @@ server {
     server_name your_domain.com;
 
 	# Project identifier for observability (should match your Swarm stack name)
-	set $project "your_stack_name";
+	set $project "qr_code";
+
+	# Route through the shared Swarm overlay network `nginx_gateway_net`.
+	# Do NOT proxy through 172.17.0.1 or published host ports.
+	#
+	# Convention:
+	#   http://<STACK_NAME>_<SERVICE_NAME>:<CONTAINER_PORT>
+	#
+	# Example with:
+	#   stack name  = qr_code
+	#   service key = production_backend
+	#   container   = listens on 3000
+	#
+	# Upstream:
+	#   http://qr_code_production_backend:3000
 
 	# Socket
     location /socket.io/ {
-        proxy_pass http://172.17.0.1:3000/socket.io/;
+        proxy_pass http://qr_code_production_backend:3000/socket.io/;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection $connection_upgrade;
@@ -143,7 +157,9 @@ server {
     }
 
     location / {
-	    proxy_pass http://172.17.0.1:3000;
+	    proxy_pass http://qr_code_production_backend:3000;
+            proxy_http_version 1.1;
+            proxy_set_header Connection "";
             proxy_set_header Host $host;
             proxy_set_header X-Real-IP $remote_addr;
             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -155,14 +171,7 @@ server {
     listen 80;
     server_name monitoring.your_domain.com;
 
-	# Project identifier for observability
-	set $project "monitoring";
-
-    location / {
-            proxy_pass http://172.17.0.1:3456;
-            proxy_set_header Host $host;
-            proxy_set_header X-Real-IP $remote_addr;
-            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-            proxy_set_header X-Forwarded-Proto $scheme;
-    }
+	# Monitoring traffic for Grafana should terminate on the Central VPS Nginx,
+	# not on the Common VPS Nginx. This block stays here only as a reminder.
+	return 404;
 }

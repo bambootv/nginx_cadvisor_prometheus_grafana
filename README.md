@@ -1,111 +1,317 @@
-# Nginx Monitoring Stack (Hybrid)
+# Nginx Monitoring Stack (Centralized)
 
-Stack giám sát Nginx trên Docker Swarm theo mô hình **Hybrid (Multi-VPS)**:
+Repo này dùng cho mô hình nhiều VPS với Docker Swarm:
 
-- Mỗi VPS chạy: **Nginx + Grafana Alloy + Prometheus + Loki + PDC Agent**
-- Dữ liệu (Prom/Loki) lưu local trên từng VPS
-- Dashboard tập trung trên **Grafana Cloud** thông qua **Private Data Source Connect (PDC)**
+- **Common VPS**: chạy `Nginx + Grafana Alloy`
+- **Central VPS**: chạy `Nginx + Grafana + Prometheus + Loki`
+- **Ingress network dùng chung**: `nginx_gateway_net`
+- **Common VPS** đẩy metrics/logs về **Central VPS** qua IP Tailscale
 
-## 📂 Cấu trúc dự án
+## Docs
 
-- `docker-compose.hybrid.yml`: Compose cho chế độ Hybrid (Swarm stack)
-- `common/`: thành phần dùng chung
-  - `common/alloy/`: cấu hình Grafana Alloy (metrics + logs)
-  - `common/nginx/`: cấu hình Nginx
-  - `common/dashboards/`: dashboard JSON (được Terraform upload lên Cloud)
-- `hybrid/`: thành phần chỉ dùng cho Hybrid
-  - `hybrid/prometheus/`: cấu hình Prometheus local
-  - `hybrid/loki/`: cấu hình Loki + rules
-  - `hybrid/terraform/`: tạo Folder/Datasource/Dashboard trên Grafana Cloud
+- Nginx nhap mon tu so 0: [`docs/nginx-from-zero.md`](docs/nginx-from-zero.md)
+- Audit chi tiet Common Nginx: [`docs/nginx-common-analysis.md`](docs/nginx-common-analysis.md)
+- Tong quan kien truc VPS: [`docs/centralized-vps.md`](docs/centralized-vps.md)
 
-## 🛠 Yêu cầu
+## Trước Khi Dùng
 
-- Docker + Docker Swarm mode
-- `make`
-- Có tài khoản Grafana Cloud (để dùng PDC + API token)
-
-## ✅ Chuẩn bị
-
-1. Cấu hình Nginx:
-   - `cp common/nginx/nginx_sites_available.example common/nginx/nginx_sites_available`
-   - Chỉnh `common/nginx/nginx_sites_available` theo nhu cầu
-
-2. Tạo file môi trường:
-   - `cp .env.example .env`
-   - Điền các biến Hybrid (PDC + Terraform) trong `.env`
-
-## 🌐 Hybrid (Multi-VPS)
-
-### 1) Tạo PDC Cluster trên Grafana Cloud
-
-- Grafana Cloud → Connections → Private Data Source Connect
-- Tạo cluster mới và lấy: `Token`, `Cluster ID`, `Hosted Grafana ID`
-
-### 2) Tạo Service Account Token (cho Terraform)
-
-- Grafana Cloud → Administration → Service Accounts
-- Tạo token (Admin/Editor) và set vào `TF_VAR_grafana_auth`
-
-### 3) Khởi chạy Terraform (tạo Datasource/Dashboard trên Cloud)
+Chuẩn bị chung cho cả Common VPS và Central VPS:
 
 ```bash
-make hybrid_terraform_init
-make hybrid_terraform_apply
-```
-
-Terraform sẽ tạo (theo `TF_VAR_vps_name`):
-- Folder: `VPS Monitoring (<vps_name>)`
-- Datasource: `Prometheus-<vps_name>`, `Loki-<vps_name>`
-- Dashboards: System Monitoring, Nginx API Observability, Container Logs
-
-### 4) Bật PDC cho Datasource (thủ công 1 lần)
-
-- Grafana Cloud → Connections → Data Sources
-- Chọn datasource `Prometheus-<vps_name>` → phần “Connect via private data source connect” → chọn cluster → Save & Test
-- Lặp lại với `Loki-<vps_name>`
-
-### 5) Deploy stack lên VPS
-
-Khởi tạo Swarm (chạy 1 lần nếu VPS chưa init):
-```bash
+cp .env.example .env
 make swarm
+make gateway_network
 ```
 
-Deploy full stack (Nginx + Monitoring):
+Sửa `.env`:
+
+- `CENTRAL_PROM_URL`
+- `CENTRAL_LOKI_URL`
+- `VPS_NAME`
+- `GF_SECURITY_ADMIN_USER`
+- `GF_SECURITY_ADMIN_PASSWORD`
+
+## Case 1: Setup Central VPS
+
+1. Copy Nginx config cho Central:
+
 ```bash
-make stack_full_hybrid
+cp central/nginx/nginx_sites_available.example central/nginx/nginx_sites_available
 ```
 
-Deploy chỉ Nginx:
+2. Sửa domain/subdomain Grafana trong `central/nginx/nginx_sites_available`
+
+3. Deploy stack Central:
+
 ```bash
-make stack_nginx_hybrid
+make deploy_central
 ```
 
-Reload Nginx sau khi đổi config:
+4. Kiểm tra service:
+
 ```bash
-make deploy_nginx_hybrid
+docker stack services monitoring_central
 ```
 
-## 🔎 Truy cập dịch vụ
+5. Kiểm tra logs khi cần:
 
-- Nginx Website: `http://<VPS_IP>:80`
-- Alloy UI: `http://<VPS_IP>:12345`
-- Prometheus (local VPS): `http://<VPS_IP>:9090`
-- Loki (local VPS): `http://<VPS_IP>:3102`
-- Grafana Cloud: `https://<your-stack>.grafana.net` → folder `VPS Monitoring (<vps_name>)`
+```bash
+docker service logs -f monitoring_central_nginx
+docker service logs -f monitoring_central_grafana
+docker service logs -f monitoring_central_prometheus
+docker service logs -f monitoring_central_loki
+```
 
-## ⚙️ Thao tác chung
+Central VPS sau khi setup xong:
 
-- Xem service trong stack:
-  - `docker stack services monitoring_hybrid`
-- Xem logs:
-  - `docker service logs -f monitoring_hybrid_nginx`
-  - `docker service logs -f monitoring_hybrid_alloy`
-- Gỡ stack:
-  - `docker stack rm monitoring_hybrid`
+- Grafana đi qua **Central Nginx**
+- Prometheus nhận `remote_write` ở `:9090`
+- Loki nhận push logs ở `:3102`
 
-## 🧭 Tài liệu
+## Case 2: Setup Common VPS
 
-- `docs/vision-simple.md`
-- `docs/vision-workshop.md`
-- `docs/monitoring-options-comparison.md`
+1. Copy Nginx config cho Common:
+
+```bash
+cp common/nginx/nginx_sites_available.example common/nginx/nginx_sites_available
+```
+
+2. Sửa các `server {}` trong `common/nginx/nginx_sites_available`
+
+Nguyên tắc:
+
+- mỗi app public route theo service DNS Swarm
+- không route qua `172.17.0.1:<port>`
+- mỗi `server {}` nên có:
+
+```nginx
+set $project "<TEN_STACK_SWARM>";
+```
+
+Ví dụ upstream:
+
+```nginx
+proxy_pass http://<stack>_<service>:<port>;
+```
+
+3. Deploy stack Common:
+
+```bash
+make deploy_common
+```
+
+4. Kiểm tra service:
+
+```bash
+docker stack services monitoring_common
+```
+
+5. Kiểm tra logs khi cần:
+
+```bash
+docker service logs -f monitoring_common_nginx
+docker service logs -f monitoring_common_alloy
+```
+
+## Case 3: Khi Bắt Đầu Một Dự Án Mới Trên Common VPS
+
+Checklist cho project app mới:
+
+1. Project app phải có Docker Swarm stack name rõ ràng, ví dụ `qr_code`
+2. Service public của app phải join `nginx_gateway_net`
+3. Service public của app không publish port host
+4. Database, Redis, worker chỉ ở private network riêng của project
+5. Common Nginx thêm `server {}` mới trỏ vào:
+
+```text
+http://<STACK_NAME>_<SERVICE_NAME>:<CONTAINER_PORT>
+```
+
+Ví dụ:
+
+```text
+http://qr_code_production_backend:3000
+```
+
+6. Nếu muốn có dashboard folder riêng cho project:
+
+```bash
+make dashboards_project PROJECT=qr_code VPS=vps-qr-code
+```
+
+7. Reload Grafana ở Central nếu vừa thêm dashboard:
+
+```bash
+make deploy_central_grafana
+```
+
+## Case 3A: Migrate Một Project Cũ Sang nginx_gateway_net
+
+Nếu project đang chạy theo kiểu cũ:
+
+- app có `ports:` public trên host
+- Common Nginx đang route qua `172.17.0.1:<port>`
+
+thì nên migrate theo 3 bước để giảm rủi ro:
+
+### Bước 1: Deploy app với network mới, chưa bỏ port cũ
+
+- thêm `nginx_gateway_net` vào service public của app
+- tạm **giữ nguyên** `ports` cũ
+- deploy lại app stack
+
+Lưu ý:
+
+- bước này bắt buộc phải `docker stack deploy` lại app
+- `make deploy_common_nginx` không thêm network mới cho nginx hay cho app được
+
+### Bước 2: Đổi Common Nginx sang service DNS
+
+Ví dụ đổi từ:
+
+```nginx
+proxy_pass http://172.17.0.1:3006;
+```
+
+sang:
+
+```nginx
+proxy_pass http://qr_code_production_backend:3000;
+```
+
+Sau đó reload Nginx:
+
+```bash
+make deploy_common_nginx
+```
+
+### Bước 3: Quan sát rồi mới bỏ port cũ
+
+Khi traffic đã chạy ổn qua `nginx_gateway_net`:
+
+- bỏ `ports:` public khỏi app
+- deploy lại app stack lần nữa
+
+Đây là cách migrate an toàn hơn so với đổi một lần.
+
+## Case 4: Khi Update Nginx Ở Common VPS
+
+Sau khi sửa `common/nginx/nginx_sites_available` hoặc `common/nginx/nginx.conf`:
+
+```bash
+make deploy_common_nginx
+```
+
+Chỉ dùng cách này khi không đổi `docker-compose.common.yml`.
+
+Nếu bạn đổi:
+
+- network
+- mount
+- ports
+- env
+- service definition trong compose
+
+thì phải:
+
+```bash
+make deploy_common
+```
+
+## Case 5: Khi Update Alloy Ở Common VPS
+
+Sau khi sửa `common/alloy/config.alloy` hoặc `.env`:
+
+```bash
+make deploy_common_alloy
+```
+
+Chỉ dùng cách này khi không đổi `docker-compose.common.yml`.
+
+Nếu đổi mount/network/compose:
+
+```bash
+make deploy_common
+```
+
+## Case 6: Khi Update Central Stack
+
+### Update Nginx Central
+
+```bash
+make deploy_central_nginx
+```
+
+### Update Grafana provisioning hoặc dashboard templates
+
+```bash
+make deploy_central_grafana
+```
+
+### Update Prometheus hoặc Loki compose/config
+
+```bash
+make deploy_central
+```
+
+## Case 7: Khi Regenerate Dashboard Theo Project
+
+Tạo hoặc overwrite dashboard cho một project:
+
+```bash
+make dashboards_project PROJECT=<TEN_STACK>
+```
+
+Khóa luôn dashboard system theo một VPS:
+
+```bash
+make dashboards_project PROJECT=<TEN_STACK> VPS=<TEN_VPS>
+```
+
+Sync lại toàn bộ project folders:
+
+```bash
+make dashboards_sync_all
+```
+
+## Các Lệnh Hay Dùng
+
+```bash
+make gateway_network
+make deploy_common
+make deploy_central
+make stack_common
+make stack_central
+make deploy_common_nginx
+make deploy_common_alloy
+make deploy_central_nginx
+make deploy_central_grafana
+make dashboards_project PROJECT=my_stack
+make dashboards_sync_all
+```
+
+## Quy Tắc Chọn Đúng Lệnh
+
+- Đổi file config bên trong service đang có sẵn:
+  - dùng `make deploy_common_nginx`
+  - dùng `make deploy_common_alloy`
+  - dùng `make deploy_central_nginx`
+  - dùng `make deploy_central_grafana`
+- Đổi compose-level như network, mount, port, env, replicas:
+  - dùng `make deploy_common`
+  - dùng `make deploy_central`
+  - `make stack_common` và `make stack_central` vẫn là alias cũ
+
+## Một Số Nguyên Tắc Quan Trọng
+
+- App public không mở `ports` public ra host
+- Common Nginx là ingress public duy nhất cho app
+- Grafana public đi qua Central Nginx
+- Prometheus và Loki nhận data trực tiếp từ Alloy qua IP Tailscale của Central
+- Không dùng `172.17.0.1:<published-port>` cho app traffic
+- Route nội bộ theo service DNS của Swarm
+
+## Docs
+
+- Tài liệu topology, luồng traffic, hình minh họa, security rationale và cách dùng:
+  - [`docs/centralized-vps.md`](/Users/ducpt/WorkSpace/nginx_cadvisor_prometheus_grafana/docs/centralized-vps.md)

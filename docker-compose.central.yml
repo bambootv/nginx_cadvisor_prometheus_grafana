@@ -1,0 +1,98 @@
+x-deploy: &deploy_config
+  mode: replicated
+  replicas: ${COMMON_REPLICAS:-1}
+  update_config:
+    parallelism: 1
+    order: start-first
+    failure_action: rollback
+    delay: 5s
+  rollback_config:
+    parallelism: 0
+    order: stop-first
+  restart_policy:
+    condition: any
+    delay: 5s
+    max_attempts: 3
+    window: 5s
+
+services:
+  nginx:
+    image: nginx:1.28
+    ports:
+      - "80:80"
+    volumes:
+      - ./central/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./central/nginx/nginx_sites_available:/etc/nginx/conf.d/default.conf:ro
+    networks:
+      - monitoring_swarm_central
+    deploy: *deploy_config
+
+  prometheus:
+    image: prom/prometheus:v3.7.3
+    ports:
+      - "9090:9090"
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.retention.time=5d"
+      - "--storage.tsdb.retention.size=800MB"
+      - "--storage.tsdb.path=/prometheus"
+      - "--web.enable-lifecycle"
+      - "--web.enable-remote-write-receiver"
+    volumes:
+      - ./central/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    networks:
+      - monitoring_swarm_central
+    deploy:
+      <<: *deploy_config
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+
+  loki:
+    image: grafana/loki:3.5
+    user: "0:0"
+    ports:
+      - "3102:3102"
+    command: -config.file=/etc/loki/config.yaml
+    volumes:
+      - ./central/loki/config.yaml:/etc/loki/config.yaml:ro
+      - ./central/loki/rules_source:/loki/rules_source:ro
+      - loki_rules_storage:/loki/rules_storage
+      - loki_data:/loki
+    networks:
+      - monitoring_swarm_central
+    deploy:
+      <<: *deploy_config
+      resources:
+        limits:
+          cpus: '0.8'
+          memory: 512M
+
+  grafana:
+    image: grafana/grafana:11.5.2
+    env_file:
+      - .env
+    environment:
+      - GF_PATHS_PROVISIONING=/etc/grafana/provisioning
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./central/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./central/dashboards:/var/lib/grafana/dashboards:ro
+    networks:
+      - monitoring_swarm_central
+    deploy: *deploy_config
+
+volumes:
+  prometheus_data:
+  loki_data:
+  loki_rules_storage:
+  grafana_data:
+
+networks:
+  monitoring_swarm_central:
+    driver: overlay
+    ipam:
+      config:
+        - subnet: 10.0.10.0/24

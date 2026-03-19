@@ -1,4 +1,4 @@
-.PHONY: swarm stack_full_hybrid stack_nginx_hybrid deploy_nginx_hybrid hybrid_terraform_init hybrid_terraform_apply hybrid_terraform_destroy hybrid_terraform_fmt
+.PHONY: swarm gateway_network stack_central stack_common deploy_central deploy_common deploy_common_nginx deploy_common_alloy deploy_central_nginx deploy_central_grafana dashboards_project dashboards_sync_all
 
 # ==============================================================================
 # COMMON COMMANDS
@@ -6,42 +6,53 @@
 swarm:
 	docker swarm init --advertise-addr 127.0.0.1
 
+gateway_network:
+	@docker network inspect nginx_gateway_net >/dev/null 2>&1 || docker network create --driver overlay --attachable nginx_gateway_net
+
 # ==============================================================================
-# HYBRID STACK (Prometheus + Loki on local, Grafana on Cloud via PDC)
+# CENTRALIZED STACK (Central: Prometheus + Loki + Grafana)
 # ==============================================================================
-stack_full_hybrid:
-	COMMON_REPLICAS=1 NGINX_REPLICAS=1 docker stack deploy --detach=false --compose-file docker-compose.hybrid.yml monitoring_hybrid
+deploy_central: gateway_network
+	COMMON_REPLICAS=1 docker stack deploy --detach=false --compose-file docker-compose.central.yml monitoring_central
 
-stack_nginx_hybrid:
-	COMMON_REPLICAS=0 NGINX_REPLICAS=1 docker stack deploy --detach=false --compose-file docker-compose.hybrid.yml monitoring_hybrid
+stack_central: gateway_network
+	COMMON_REPLICAS=1 docker stack deploy --detach=false --compose-file docker-compose.central.yml monitoring_central
 
-deploy_nginx_hybrid:
-	docker service update --force monitoring_hybrid_nginx
+# ==============================================================================
+# COMMON STACK (Common: Nginx + Alloy)
+# ==============================================================================
+deploy_common: gateway_network
+	COMMON_REPLICAS=1 NGINX_REPLICAS=1 docker stack deploy --detach=false --compose-file docker-compose.common.yml monitoring_common
 
-# Terraform for Hybrid Mode (VPS Setup)
-hybrid_terraform_init:
-	docker run --rm \
-	--env-file .env \
-	-v "$(CURDIR)":/workspace \
-	-w /workspace/hybrid/terraform \
-	hashicorp/terraform:light init
+stack_common: gateway_network
+	COMMON_REPLICAS=1 NGINX_REPLICAS=1 docker stack deploy --detach=false --compose-file docker-compose.common.yml monitoring_common
 
-hybrid_terraform_apply:
-	docker run --rm \
-	--env-file .env \
-	-v "$(CURDIR)":/workspace \
-	-w /workspace/hybrid/terraform \
-	hashicorp/terraform:light apply -auto-approve
+deploy_common_nginx:
+	# Chỉ force rolling update service nginx hien tai.
+	# Khong ap dung cho thay doi compose nhu network/mount/ports.
+	docker service update --force monitoring_common_nginx
 
-hybrid_terraform_destroy:
-	docker run --rm \
-	--env-file .env \
-	-v "$(CURDIR)":/workspace \
-	-w /workspace/hybrid/terraform \
-	hashicorp/terraform:light destroy -auto-approve
+deploy_common_alloy:
+	# Chỉ force rolling update service alloy hien tai.
+	# Khong ap dung cho thay doi compose nhu network/mount/ports.
+	docker service update --force monitoring_common_alloy
 
-hybrid_terraform_fmt:
-	docker run --rm \
-	-v "$(CURDIR)":/workspace \
-	-w /workspace/hybrid/terraform \
-	hashicorp/terraform:light fmt
+deploy_central_nginx:
+	# Chỉ force rolling update service nginx hien tai.
+	# Khong ap dung cho thay doi compose nhu network/mount/ports.
+	docker service update --force monitoring_central_nginx
+
+deploy_central_grafana:
+	# Chỉ force rolling update service grafana hien tai.
+	# Khong ap dung cho thay doi compose nhu network/mount/ports.
+	docker service update --force monitoring_central_grafana
+
+# ==============================================================================
+# DASHBOARDS
+# ==============================================================================
+dashboards_project:
+	@test -n "$(PROJECT)" || (echo "PROJECT is required. Example: make dashboards_project PROJECT=my_stack" && exit 1)
+	python3 scripts/new_project_dashboards.py "$(PROJECT)" $(if $(VPS),--vps "$(VPS)",) --overwrite
+
+dashboards_sync_all:
+	python3 scripts/sync_all_project_dashboards.py

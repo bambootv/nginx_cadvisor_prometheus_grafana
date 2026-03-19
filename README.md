@@ -3,7 +3,7 @@
 Repo này dùng cho mô hình nhiều VPS với Docker Swarm:
 
 - **Common VPS**: chạy `Nginx + Grafana Alloy`
-- **Central VPS**: chạy `Grafana + Prometheus + Loki`
+- **Central VPS**: chạy `Grafana + Prometheus + Loki + cloudflared`
 - **Ingress network dùng chung**: `nginx_gateway_net`
 - **Common VPS** đẩy metrics/logs về **Central VPS** qua IP Tailscale
 
@@ -12,6 +12,7 @@ Repo này dùng cho mô hình nhiều VPS với Docker Swarm:
 - Nginx nhap mon tu so 0: [`docs/nginx-from-zero.md`](docs/nginx-from-zero.md)
 - Audit chi tiet Common Nginx: [`docs/nginx-common-analysis.md`](docs/nginx-common-analysis.md)
 - Tong quan kien truc VPS: [`docs/centralized-vps.md`](docs/centralized-vps.md)
+- Cloudflare Tunnel production cho Grafana: [`docs/cloudflare-tunnel-grafana-production.md`](docs/cloudflare-tunnel-grafana-production.md)
 
 ## Trước Khi Dùng
 
@@ -30,10 +31,21 @@ Sửa `.env`:
 - `VPS_NAME`
 - `GF_SECURITY_ADMIN_USER`
 - `GF_SECURITY_ADMIN_PASSWORD`
+- `GF_SERVER_DOMAIN`
+- `GF_SERVER_ROOT_URL`
+- `GF_SERVER_ENFORCE_DOMAIN`
 
 ## Case 1: Setup Central VPS
 
 1. Deploy stack Central:
+
+Trước khi deploy, tạo Docker secret cho Cloudflare Tunnel token:
+
+```bash
+printf '%s' 'PASTE_TUNNEL_TOKEN_HERE' | docker secret create cf_tunnel_token -
+```
+
+Sau đó deploy:
 
 ```bash
 make deploy_central
@@ -51,6 +63,7 @@ docker stack services monitoring_central
 docker service logs -f monitoring_central_grafana
 docker service logs -f monitoring_central_prometheus
 docker service logs -f monitoring_central_loki
+docker service logs -f monitoring_central_cloudflared
 ```
 
 Central VPS sau khi setup xong:
@@ -234,6 +247,12 @@ make deploy_common
 make deploy_central_grafana
 ```
 
+### Update Cloudflare Tunnel service
+
+```bash
+make deploy_central_cloudflared
+```
+
 ### Update Prometheus hoặc Loki compose/config
 
 ```bash
@@ -271,6 +290,7 @@ make stack_central
 make deploy_common_nginx
 make deploy_common_alloy
 make deploy_central_grafana
+make deploy_central_cloudflared
 make dashboards_project PROJECT=my_stack
 make dashboards_sync_all
 ```
@@ -281,6 +301,7 @@ make dashboards_sync_all
   - dùng `make deploy_common_nginx`
   - dùng `make deploy_common_alloy`
   - dùng `make deploy_central_grafana`
+  - dùng `make deploy_central_cloudflared`
 - Đổi compose-level như network, mount, port, env, replicas:
   - dùng `make deploy_common`
   - dùng `make deploy_central`

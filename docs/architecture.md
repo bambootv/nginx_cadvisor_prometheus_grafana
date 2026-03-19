@@ -32,9 +32,10 @@ flowchart TB
         grafana[Grafana\nPort 3000]
         prom[Prometheus\nPort 9090]
         loki[Loki\nPort 3102]
+        cfd[cloudflared]
     end
 
-    cf[Cloudflare Tunnel]
+    cf[Cloudflare Edge + Access]
 
     user([Public User]) --> nginx_c
     nginx_c --> app
@@ -47,7 +48,8 @@ flowchart TB
     loki --> grafana
 
     admin([Admin]) --> cf
-    cf --> grafana
+    cf --> cfd
+    cfd --> grafana
 ```
 
 ---
@@ -74,12 +76,13 @@ monitoring_common/
 
 ```
 monitoring_central/
+├── cloudflared    ← Cloudflare Tunnel connector
 ├── grafana        ← dashboard & alert
 ├── prometheus     ← nhận remote_write từ Alloy
 └── loki           ← nhận push logs từ Alloy
 ```
 
-Grafana chạy nội bộ trên network của stack và được đưa ra ngoài bằng Cloudflare Tunnel.
+Grafana chạy nội bộ trên network của stack và được đưa ra ngoài bằng service `cloudflared`.
 
 ---
 ## 3. Kiến trúc network

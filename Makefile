@@ -1,4 +1,4 @@
-.PHONY: swarm gateway_network stack_central stack_common deploy_central deploy_common deploy_common_nginx deploy_common_alloy deploy_central_nginx deploy_central_grafana dashboards_project dashboards_sync_all
+.PHONY: swarm gateway_network stack_central stack_common deploy_central deploy_common deploy_common_nginx deploy_common_alloy deploy_central_grafana dashboards_project dashboards_sync_all
 
 # ==============================================================================
 # COMMON COMMANDS
@@ -36,11 +36,6 @@ deploy_common_alloy:
 	# Chỉ force rolling update service alloy hien tai.
 	# Khong ap dung cho thay doi compose nhu network/mount/ports.
 	docker service update --force monitoring_common_alloy
-
-deploy_central_nginx:
-	# Chỉ force rolling update service nginx hien tai.
-	# Khong ap dung cho thay doi compose nhu network/mount/ports.
-	docker service update --force monitoring_central_nginx
 
 deploy_central_grafana:
 	# Chỉ force rolling update service grafana hien tai.

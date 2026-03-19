@@ -3,7 +3,7 @@
 Repo này dùng cho mô hình nhiều VPS với Docker Swarm:
 
 - **Common VPS**: chạy `Nginx + Grafana Alloy`
-- **Central VPS**: chạy `Nginx + Grafana + Prometheus + Loki`
+- **Central VPS**: chạy `Grafana + Prometheus + Loki`
 - **Ingress network dùng chung**: `nginx_gateway_net`
 - **Common VPS** đẩy metrics/logs về **Central VPS** qua IP Tailscale
 
@@ -33,30 +33,21 @@ Sửa `.env`:
 
 ## Case 1: Setup Central VPS
 
-1. Copy Nginx config cho Central:
-
-```bash
-cp central/nginx/nginx_sites_available.example central/nginx/nginx_sites_available
-```
-
-2. Sửa domain/subdomain Grafana trong `central/nginx/nginx_sites_available`
-
-3. Deploy stack Central:
+1. Deploy stack Central:
 
 ```bash
 make deploy_central
 ```
 
-4. Kiểm tra service:
+2. Kiểm tra service:
 
 ```bash
 docker stack services monitoring_central
 ```
 
-5. Kiểm tra logs khi cần:
+3. Kiểm tra logs khi cần:
 
 ```bash
-docker service logs -f monitoring_central_nginx
 docker service logs -f monitoring_central_grafana
 docker service logs -f monitoring_central_prometheus
 docker service logs -f monitoring_central_loki
@@ -64,7 +55,8 @@ docker service logs -f monitoring_central_loki
 
 Central VPS sau khi setup xong:
 
-- Grafana đi qua **Central Nginx**
+- Grafana chạy nội bộ ở `grafana:3000`
+- Public Grafana đi qua **Cloudflare Tunnel**
 - Prometheus nhận `remote_write` ở `:9090`
 - Loki nhận push logs ở `:3102`
 
@@ -236,12 +228,6 @@ make deploy_common
 
 ## Case 6: Khi Update Central Stack
 
-### Update Nginx Central
-
-```bash
-make deploy_central_nginx
-```
-
 ### Update Grafana provisioning hoặc dashboard templates
 
 ```bash
@@ -284,7 +270,6 @@ make stack_common
 make stack_central
 make deploy_common_nginx
 make deploy_common_alloy
-make deploy_central_nginx
 make deploy_central_grafana
 make dashboards_project PROJECT=my_stack
 make dashboards_sync_all
@@ -295,7 +280,6 @@ make dashboards_sync_all
 - Đổi file config bên trong service đang có sẵn:
   - dùng `make deploy_common_nginx`
   - dùng `make deploy_common_alloy`
-  - dùng `make deploy_central_nginx`
   - dùng `make deploy_central_grafana`
 - Đổi compose-level như network, mount, port, env, replicas:
   - dùng `make deploy_common`
@@ -306,7 +290,7 @@ make dashboards_sync_all
 
 - App public không mở `ports` public ra host
 - Common Nginx là ingress public duy nhất cho app
-- Grafana public đi qua Central Nginx
+- Grafana public đi qua Cloudflare Tunnel
 - Prometheus và Loki nhận data trực tiếp từ Alloy qua IP Tailscale của Central
 - Không dùng `172.17.0.1:<published-port>` cho app traffic
 - Route nội bộ theo service DNS của Swarm

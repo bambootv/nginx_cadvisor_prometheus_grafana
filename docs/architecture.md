@@ -29,11 +29,12 @@ flowchart TB
     end
 
     subgraph central["Central VPS"]
-        nginx_central[Nginx\nreverse proxy]
         grafana[Grafana\nPort 3000]
         prom[Prometheus\nPort 9090]
         loki[Loki\nPort 3102]
     end
+
+    cf[Cloudflare Tunnel]
 
     user([Public User]) --> nginx_c
     nginx_c --> app
@@ -45,8 +46,8 @@ flowchart TB
     prom --> grafana
     loki --> grafana
 
-    admin([Admin]) -->|Tailscale| nginx_central
-    nginx_central --> grafana
+    admin([Admin]) --> cf
+    cf --> grafana
 ```
 
 ---
@@ -73,13 +74,12 @@ monitoring_common/
 
 ```
 monitoring_central/
-├── nginx          ← public entrypoint cho Grafana
 ├── grafana        ← dashboard & alert
 ├── prometheus     ← nhận remote_write từ Alloy
 └── loki           ← nhận push logs từ Alloy
 ```
 
-Grafana **không** publish port `3000` ra ngoài — đi qua Nginx.
+Grafana chạy nội bộ trên network của stack và được đưa ra ngoài bằng Cloudflare Tunnel.
 
 ---
 ## 3. Kiến trúc network
@@ -243,15 +243,15 @@ Mẫu policy:
 ```mermaid
 sequenceDiagram
     participant A as Admin
-    participant N as Central Nginx
+    participant C as Cloudflare Tunnel
     participant G as Grafana
 
-    A->>N: Mở Grafana domain (qua Tailscale)
-    N->>G: proxy nội bộ
+    A->>C: Mở Grafana domain
+    C->>G: Route vào grafana:3000
     G-->>A: Grafana UI
 ```
 
-> **Điểm quan trọng:** Admin phải kết nối Tailscale trước. Grafana không public Internet.
+> **Điểm quan trọng:** Grafana không cần public port host. Cloudflare Tunnel sẽ route vào service Grafana bên trong.
 
 ---
 
@@ -263,13 +263,12 @@ sequenceDiagram
 cp .env.example .env
 # Sửa Grafana credentials và endpoints
 
-cp central/nginx/nginx_sites_available.example central/nginx/nginx_sites_available
-# Sửa domain/subdomain Grafana
-
 make swarm
 make gateway_network
 make deploy_central
 ```
+
+Sau đó cấu hình Cloudflare Tunnel để route domain Grafana vào service `grafana:3000`.
 
 ---
 
@@ -348,7 +347,6 @@ make deploy_common_nginx
 make deploy_common_alloy
 
 # Central VPS
-make deploy_central_nginx
 make deploy_central_grafana
 ```
 
@@ -391,7 +389,6 @@ make deploy_central
 # Deploy từng service
 make deploy_common_nginx
 make deploy_common_alloy
-make deploy_central_nginx
 make deploy_central_grafana
 
 # Dashboard
@@ -415,7 +412,7 @@ make dashboards_sync_all
 
 | Port | Trạng thái |
 |---|---|
-| `80` | Public — Grafana qua Nginx |
+| Grafana | Private trong stack — publish qua Cloudflare Tunnel |
 | `9090` | Restricted — chặn ở firewall provider |
 | `3102` | Restricted — chặn ở firewall provider |
 
@@ -431,8 +428,7 @@ make dashboards_sync_all
 ├── docker-compose.common.yml
 ├── docker-compose.central.yml
 ├── .env.example
-├── common/nginx/nginx_sites_available.example
-└── central/nginx/nginx_sites_available.example
+└── common/nginx/nginx_sites_available.example
 ```
 
 ---
@@ -442,4 +438,4 @@ make dashboards_sync_all
 - `VPS_NAME` phải **khác nhau** giữa các Common VPS
 - `CENTRAL_PROM_URL` và `CENTRAL_LOKI_URL` phải là URL đầy đủ có path
 - Mỗi vhost Nginx nên set đúng `$project` để metrics/logs có label chính xác
-- TLS/cert xử lý ở Nginx layer nếu cần
+- Grafana domain/tunnel xử lý ở Cloudflare Tunnel layer

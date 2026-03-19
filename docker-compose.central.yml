@@ -78,11 +78,28 @@ services:
           cpus: '2.0'
           memory: 4G
 
+  cloudflared:
+    image: cloudflare/cloudflared:2026.3.0
+    command: tunnel --no-autoupdate run --token-file /run/secrets/cf_tunnel_token
+    secrets:
+      - source: cf_tunnel_token
+        target: cf_tunnel_token
+        mode: 0400
+    networks:
+      - monitoring_swarm_central
+    deploy:
+      <<: *deploy_config
+      replicas: 1
+
 volumes:
   prometheus_data:
   loki_data:
   loki_rules_storage:
   grafana_data:
+
+secrets:
+  cf_tunnel_token:
+    external: true
 
 networks:
   monitoring_swarm_central:

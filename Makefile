@@ -1,4 +1,4 @@
-.PHONY: swarm gateway_network stack_central stack_common deploy_central deploy_common deploy_common_nginx deploy_common_alloy deploy_central_grafana dashboards_project dashboards_sync_all
+.PHONY: swarm gateway_network check_cf_tunnel_secret stack_central stack_common deploy_central deploy_common deploy_common_nginx deploy_common_alloy deploy_central_grafana deploy_central_cloudflared dashboards_project dashboards_sync_all
 
 # ==============================================================================
 # COMMON COMMANDS
@@ -9,13 +9,16 @@ swarm:
 gateway_network:
 	@docker network inspect nginx_gateway_net >/dev/null 2>&1 || docker network create --driver overlay --attachable nginx_gateway_net
 
+check_cf_tunnel_secret:
+	@docker secret inspect cf_tunnel_token >/dev/null 2>&1 || (echo "Missing Docker secret: cf_tunnel_token" && echo "Create it first: printf '%s' 'PASTE_TUNNEL_TOKEN_HERE' | docker secret create cf_tunnel_token -" && exit 1)
+
 # ==============================================================================
 # CENTRALIZED STACK (Central: Prometheus + Loki + Grafana)
 # ==============================================================================
-deploy_central: gateway_network
+deploy_central: gateway_network check_cf_tunnel_secret
 	COMMON_REPLICAS=1 docker stack deploy --detach=false --compose-file docker-compose.central.yml monitoring_central
 
-stack_central: gateway_network
+stack_central: gateway_network check_cf_tunnel_secret
 	COMMON_REPLICAS=1 docker stack deploy --detach=false --compose-file docker-compose.central.yml monitoring_central
 
 # ==============================================================================
@@ -41,6 +44,11 @@ deploy_central_grafana:
 	# Chỉ force rolling update service grafana hien tai.
 	# Khong ap dung cho thay doi compose nhu network/mount/ports.
 	docker service update --force monitoring_central_grafana
+
+deploy_central_cloudflared:
+	# Chỉ force rolling update service cloudflared hien tai.
+	# Khong ap dung cho thay doi compose nhu network/mount/ports.
+	docker service update --force monitoring_central_cloudflared
 
 # ==============================================================================
 # DASHBOARDS

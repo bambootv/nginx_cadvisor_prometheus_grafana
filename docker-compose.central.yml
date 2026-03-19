@@ -84,7 +84,7 @@ services:
     secrets:
       - source: cf_tunnel_token
         target: cf_tunnel_token
-        mode: 0400
+        mode: 0444
     networks:
       - monitoring_swarm_central
     deploy:

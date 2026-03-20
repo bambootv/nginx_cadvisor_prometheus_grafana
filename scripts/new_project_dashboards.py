@@ -2,7 +2,9 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
+import re
 import sys
 from pathlib import Path
 from typing import Any
@@ -15,6 +17,16 @@ TEMPLATE_DASHBOARDS = [
 ]
 
 
+def _safe_suffix(value: str) -> str:
+    cleaned = re.sub(r"[^A-Za-z0-9._-]+", "-", value.strip())
+    cleaned = cleaned.strip("-")
+    return cleaned or "vps"
+
+
+def _dashboard_filename(template_name: str, vps: str) -> str:
+    return template_name
+
+
 def _lock_variable(dashboard: dict[str, Any], name: str, value: str, required: bool = False) -> None:
     templating = dashboard.get("templating", {})
     variables = templating.get("list", [])
@@ -22,7 +34,6 @@ def _lock_variable(dashboard: dict[str, Any], name: str, value: str, required: b
         if variable.get("name") != name:
             continue
 
-        # Lock a dashboard variable to a single value and hide it in project-specific folders.
         variable["hide"] = 2
         variable["skipUrlSync"] = True
         variable["refresh"] = 0
@@ -34,15 +45,51 @@ def _lock_variable(dashboard: dict[str, Any], name: str, value: str, required: b
         variable["options"] = [{"selected": True, "text": value, "value": value}]
         variable["current"] = {"selected": True, "text": value, "value": value}
         variable.pop("datasource", None)
+        variable.pop("allValue", None)
         return
 
     if required:
         raise RuntimeError(f"Template dashboards must define a variable named '{name}'.")
 
 
-def _project_uid(project: str, base_uid: str | None) -> str:
+def _set_default_variable(
+    dashboard: dict[str, Any],
+    name: str,
+    value: str,
+    *,
+    required: bool = False,
+) -> None:
+    templating = dashboard.get("templating", {})
+    variables = templating.get("list", [])
+    for variable in variables:
+        if variable.get("name") != name:
+            continue
+
+        variable["hide"] = 0
+        variable["skipUrlSync"] = False
+        variable["refresh"] = max(int(variable.get("refresh", 1) or 1), 1)
+        variable["multi"] = False
+        variable["includeAll"] = False
+        variable["current"] = {"selected": True, "text": value, "value": value}
+        variable["options"] = [{"selected": True, "text": value, "value": value}]
+        variable.pop("allValue", None)
+        return
+
+    if required:
+        raise RuntimeError(f"Template dashboards must define a variable named '{name}'.")
+
+
+def _dashboard_uid(project: str, vps: str, base_uid: str | None) -> str:
     base_uid = (base_uid or "dashboard").strip() or "dashboard"
-    return f"{project}-{base_uid}"
+    project_part = _safe_suffix(project)[:10] or "project"
+    base_part = _safe_suffix(base_uid)[:12] or "dashboard"
+    scope = f"{project}|{base_uid}"
+    digest = hashlib.sha1(scope.encode("utf-8")).hexdigest()[:10]
+    return f"{project_part}-{base_part}-{digest}"
+
+
+def _dashboard_title(project: str, vps: str, title: str) -> str:
+    return f"[{project}] {title}"
 
 
 def generate_project_dashboards(project: str, vps: str = "", overwrite: bool = False) -> int:
@@ -69,16 +116,14 @@ def generate_project_dashboards(project: str, vps: str = "", overwrite: bool = F
             print(f"error: missing template dashboard: {src}", file=sys.stderr)
             return 2
 
-        dst = out_dir / filename
+        dst = out_dir / _dashboard_filename(filename, vps)
         if dst.exists() and not overwrite:
             print(f"skip: {dst} (already exists; use --overwrite)", file=sys.stderr)
             continue
 
         dashboard = json.loads(src.read_text(encoding="utf-8"))
-        dashboard["uid"] = _project_uid(project, dashboard.get("uid"))
-
-        title = str(dashboard.get("title") or "Dashboard")
-        dashboard["title"] = f"[{project}] {title}"
+        dashboard["uid"] = _dashboard_uid(project, vps, dashboard.get("uid"))
+        dashboard["title"] = _dashboard_title(project, vps, str(dashboard.get("title") or "Dashboard"))
 
         tags = dashboard.get("tags")
         if isinstance(tags, list):
@@ -89,15 +134,13 @@ def generate_project_dashboards(project: str, vps: str = "", overwrite: bool = F
 
         _lock_variable(dashboard, "project", project, required=True)
         if vps:
-            _lock_variable(dashboard, "vps", vps)
+            _set_default_variable(dashboard, "vps", vps, required=True)
 
         dst.write_text(json.dumps(dashboard, indent=4, ensure_ascii=False) + "\n", encoding="utf-8")
         print(f"wrote: {dst.relative_to(repo_root)}")
         wrote_any = True
 
     if not wrote_any:
-        # Nothing to do (all dashboards already exist and --overwrite not used).
-        # Treat this as a successful no-op so `make dashboards_project` doesn't fail.
         return 0
 
     return 0
@@ -106,8 +149,10 @@ def generate_project_dashboards(project: str, vps: str = "", overwrite: bool = F
 def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
-            "Generate per-project Grafana dashboards (1 folder per project) from the"
-            " templates in central/dashboards/projects/_all."
+            "Generate per-project Grafana dashboards from the templates in "
+            "central/dashboards/projects/_all. When --vps is provided, the project "
+            "dashboards still keep the same filenames and titles, but the VPS filter "
+            "defaults to that VPS and does not expose All."
         )
     )
     parser.add_argument(
@@ -116,7 +161,7 @@ def main() -> int:
     )
     parser.add_argument(
         "--vps",
-        help="Optional VPS identifier to lock System dashboard to a single VPS.",
+        help="Optional default VPS for the dashboard filter. Files and titles stay per-project only.",
     )
     parser.add_argument(
         "--overwrite",

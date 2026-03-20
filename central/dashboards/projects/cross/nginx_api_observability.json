@@ -52,13 +52,13 @@
             "targets": [
                 {
                     "refId": "A",
-	                    "expr": "sum(loki_nginx_requests_rate{project=~\"$project\", vps=~\"$vps\", resp_code=~\"$resp_code\"})",
+                    "expr": "sum(loki_nginx_requests_rate{project=~\"$project\", vps=~\"$vps\", resp_code=~\"$resp_code\"})",
                     "legendFormat": "Current Speed",
                     "range": true
                 },
                 {
                     "refId": "B",
-	                    "expr": "sum(sum_over_time(loki_nginx_requests_total_15s{project=~\"$project\", vps=~\"$vps\", resp_code=~\"$resp_code\"}[$__range]))",
+                    "expr": "sum(sum_over_time(loki_nginx_requests_total_15s{project=~\"$project\", vps=~\"$vps\", resp_code=~\"$resp_code\"}[$__range]))",
                     "legendFormat": "Total Requests",
                     "range": true
                 }
@@ -147,7 +147,7 @@
             "targets": [
                 {
                     "refId": "A",
-	                    "expr": "(sum(sum_over_time(loki_nginx_requests_total_15s{project=~\"$project\", vps=~\"$vps\", resp_code=~\"5..\"}[$__range])) / clamp_min(sum(sum_over_time(loki_nginx_requests_total_15s{project=~\"$project\", vps=~\"$vps\", resp_code=~\"$resp_code\"}[$__range])), 1)) * 100",
+                    "expr": "(sum(sum_over_time(loki_nginx_requests_total_15s{project=~\"$project\", vps=~\"$vps\", resp_code=~\"5..\"}[$__range])) / clamp_min(sum(sum_over_time(loki_nginx_requests_total_15s{project=~\"$project\", vps=~\"$vps\", resp_code=~\"$resp_code\"}[$__range])), 1)) * 100",
                     "range": false
                 }
             ],
@@ -207,7 +207,7 @@
             "targets": [
                 {
                     "refId": "A",
-	                    "expr": "histogram_quantile(0.95, sum by (le) (increase(loki_process_custom_nginxlog_request_duration_seconds_bucket{project=~\"$project\", vps=~\"$vps\", resp_code=~\"$resp_code\"}[$__range])))",
+                    "expr": "histogram_quantile(0.95, sum by (le) (increase(loki_process_custom_nginxlog_request_duration_seconds_bucket{project=~\"$project\", vps=~\"$vps\", resp_code=~\"$resp_code\"}[$__range])))",
                     "range": false
                 }
             ],
@@ -262,7 +262,7 @@
             "targets": [
                 {
                     "refId": "A",
-	                    "expr": "histogram_quantile(0.99, sum by (le) (increase(loki_process_custom_nginxlog_request_duration_seconds_bucket{project=~\"$project\", vps=~\"$vps\", resp_code=~\"$resp_code\"}[$__range])))",
+                    "expr": "histogram_quantile(0.99, sum by (le) (increase(loki_process_custom_nginxlog_request_duration_seconds_bucket{project=~\"$project\", vps=~\"$vps\", resp_code=~\"$resp_code\"}[$__range])))",
                     "range": false
                 }
             ],
@@ -317,7 +317,7 @@
             "targets": [
                 {
                     "refId": "A",
-	                    "expr": "sum(loki_nginx_requests_rate{project=~\"$project\", vps=~\"$vps\", resp_code=~\"$resp_code\"})",
+                    "expr": "sum(loki_nginx_requests_rate{project=~\"$project\", vps=~\"$vps\", resp_code=~\"$resp_code\"})",
                     "legendFormat": "Total req/s",
                     "range": true
                 }
@@ -392,7 +392,7 @@
             "targets": [
                 {
                     "refId": "A",
-	                    "expr": "(sum by (request) (loki_nginx_requests_total_1m{project=~\"$project\", vps=~\"$vps\", request=~\".*/api.*\", resp_code=~\"$resp_code\"})) > 0 and on(request) (topk($topk, sum by (request) (sum_over_time(loki_nginx_requests_total_1m{project=~\"$project\", vps=~\"$vps\", request=~\".*/api.*\", resp_code=~\"$resp_code\"}[$__range]))))",
+                    "expr": "(sum by (request) (loki_nginx_requests_total_1m{project=~\"$project\", vps=~\"$vps\", request=~\".*/api.*\", resp_code=~\"$resp_code\"})) > 0 and on(request) (topk($topk, sum by (request) (sum_over_time(loki_nginx_requests_total_1m{project=~\"$project\", vps=~\"$vps\", request=~\".*/api.*\", resp_code=~\"$resp_code\"}[$__range]))))",
                     "legendFormat": "{{request}}",
                     "range": true
                 }
@@ -452,7 +452,7 @@
             "targets": [
                 {
                     "refId": "A",
-	                    "expr": "(sum by (request) (loki_nginx_requests_total_1m{project=~\"$project\", vps=~\"$vps\", request=~\".*/api.*\", resp_code=~\"2..\"})) > 0 and on(request) (topk($topk, sum by (request) (sum_over_time(loki_nginx_requests_total_1m{project=~\"$project\", vps=~\"$vps\", request=~\".*/api.*\", resp_code=~\"2..\"}[$__range]))))",
+                    "expr": "(sum by (request) (loki_nginx_requests_total_1m{project=~\"$project\", vps=~\"$vps\", request=~\".*/api.*\", resp_code=~\"2..\"})) > 0 and on(request) (topk($topk, sum by (request) (sum_over_time(loki_nginx_requests_total_1m{project=~\"$project\", vps=~\"$vps\", request=~\".*/api.*\", resp_code=~\"2..\"}[$__range]))))",
                     "legendFormat": "{{request}}",
                     "range": true
                 }
@@ -515,7 +515,7 @@
             "targets": [
                 {
                     "refId": "A",
-	                    "expr": "(sum by (request) (loki_nginx_requests_total_1m{project=~\"$project\", vps=~\"$vps\", request=~\".*/api.*\", resp_code=~\"3..\"})) > 0 and on(request) (topk($topk, sum by (request) (sum_over_time(loki_nginx_requests_total_1m{project=~\"$project\", vps=~\"$vps\", request=~\".*/api.*\", resp_code=~\"3..\"}[$__range]))))",
+                    "expr": "(sum by (request) (loki_nginx_requests_total_1m{project=~\"$project\", vps=~\"$vps\", request=~\".*/api.*\", resp_code=~\"3..\"})) > 0 and on(request) (topk($topk, sum by (request) (sum_over_time(loki_nginx_requests_total_1m{project=~\"$project\", vps=~\"$vps\", request=~\".*/api.*\", resp_code=~\"3..\"}[$__range]))))",
                     "legendFormat": "{{request}}",
                     "range": true
                 }
@@ -578,7 +578,7 @@
             "targets": [
                 {
                     "refId": "A",
-	                    "expr": "(sum by (request) (loki_nginx_requests_total_1m{project=~\"$project\", vps=~\"$vps\", request=~\".*/api.*\", resp_code=~\"4..\"})) > 0 and on(request) (topk($topk, sum by (request) (sum_over_time(loki_nginx_requests_total_1m{project=~\"$project\", vps=~\"$vps\", request=~\".*/api.*\", resp_code=~\"4..\"}[$__range]))))",
+                    "expr": "(sum by (request) (loki_nginx_requests_total_1m{project=~\"$project\", vps=~\"$vps\", request=~\".*/api.*\", resp_code=~\"4..\"})) > 0 and on(request) (topk($topk, sum by (request) (sum_over_time(loki_nginx_requests_total_1m{project=~\"$project\", vps=~\"$vps\", request=~\".*/api.*\", resp_code=~\"4..\"}[$__range]))))",
                     "legendFormat": "{{request}}",
                     "range": true
                 }
@@ -641,7 +641,7 @@
             "targets": [
                 {
                     "refId": "A",
-	                    "expr": "(sum by (request) (loki_nginx_requests_total_1m{project=~\"$project\", vps=~\"$vps\", request=~\".*/api.*\", resp_code=~\"5..\"})) > 0 and on(request) (topk($topk, sum by (request) (sum_over_time(loki_nginx_requests_total_1m{project=~\"$project\", vps=~\"$vps\", request=~\".*/api.*\", resp_code=~\"5..\"}[$__range]))))",
+                    "expr": "(sum by (request) (loki_nginx_requests_total_1m{project=~\"$project\", vps=~\"$vps\", request=~\".*/api.*\", resp_code=~\"5..\"})) > 0 and on(request) (topk($topk, sum by (request) (sum_over_time(loki_nginx_requests_total_1m{project=~\"$project\", vps=~\"$vps\", request=~\".*/api.*\", resp_code=~\"5..\"}[$__range]))))",
                     "legendFormat": "{{request}}",
                     "range": true
                 }
@@ -717,7 +717,7 @@
             "targets": [
                 {
                     "refId": "A",
-	                    "expr": "topk(10, sum by (request) (sum_over_time(loki_nginx_requests_total_15s{project=~\"$project\", vps=~\"$vps\", resp_code=~\"$resp_code\"}[$__range])))",
+                    "expr": "topk(10, sum by (request) (sum_over_time(loki_nginx_requests_total_15s{project=~\"$project\", vps=~\"$vps\", resp_code=~\"$resp_code\"}[$__range])))",
                     "format": "table",
                     "instant": true
                 }
@@ -795,7 +795,7 @@
             "targets": [
                 {
                     "refId": "A",
-	                    "expr": "topk(10, histogram_quantile(0.95, sum by (le, request) (increase(loki_process_custom_nginxlog_request_duration_seconds_bucket{project=~\"$project\", vps=~\"$vps\", resp_code=~\"$resp_code\"}[$__range])))>=0)",
+                    "expr": "topk(10, histogram_quantile(0.95, sum by (le, request) (increase(loki_process_custom_nginxlog_request_duration_seconds_bucket{project=~\"$project\", vps=~\"$vps\", resp_code=~\"$resp_code\"}[$__range])))>=0)",
                     "format": "table",
                     "instant": true,
                     "range": false
@@ -881,7 +881,7 @@
             "targets": [
                 {
                     "refId": "A",
-	                    "expr": "topk(10, sum by (request, resp_code) (sum_over_time(loki_nginx_requests_total_15s{project=~\"$project\", vps=~\"$vps\", resp_code=~\"4..\"}[$__range])))",
+                    "expr": "topk(10, sum by (request, resp_code) (sum_over_time(loki_nginx_requests_total_15s{project=~\"$project\", vps=~\"$vps\", resp_code=~\"4..\"}[$__range])))",
                     "format": "table",
                     "instant": true,
                     "range": false
@@ -960,7 +960,7 @@
             "targets": [
                 {
                     "refId": "A",
-	                    "expr": "topk(10, sum by (request, resp_code) (sum_over_time(loki_nginx_requests_total_15s{project=~\"$project\", vps=~\"$vps\", resp_code=~\"5..\"}[$__range])))",
+                    "expr": "topk(10, sum by (request, resp_code) (sum_over_time(loki_nginx_requests_total_15s{project=~\"$project\", vps=~\"$vps\", resp_code=~\"5..\"}[$__range])))",
                     "format": "table",
                     "instant": true,
                     "range": false
@@ -1052,7 +1052,7 @@
             "targets": [
                 {
                     "refId": "A",
-	                    "expr": "sum by (country_name) (sum_over_time(loki_nginx_requests_total_by_country{project=~\"$project\", vps=~\"$vps\"}[$__range]))",
+                    "expr": "sum by (country_name) (sum_over_time(loki_nginx_requests_total_by_country{project=~\"$project\", vps=~\"$vps\"}[$__range]))",
                     "format": "table",
                     "instant": true
                 }
@@ -1152,7 +1152,7 @@
             "targets": [
                 {
                     "refId": "A",
-	                    "expr": "sum by (country_name) (sum_over_time(loki_nginx_requests_total_by_country{project=~\"$project\", vps=~\"$vps\", resp_code=~\"4..|5..\"}[$__range]))",
+                    "expr": "sum by (country_name) (sum_over_time(loki_nginx_requests_total_by_country{project=~\"$project\", vps=~\"$vps\", resp_code=~\"4..|5..\"}[$__range]))",
                     "format": "table",
                     "instant": true
                 }
@@ -1248,35 +1248,35 @@
             "targets": [
                 {
                     "refId": "A",
-	                    "expr": "sum by (country_name) (sum_over_time(loki_nginx_requests_total_by_country{project=~\"$project\", vps=~\"$vps\"}[$__range]))",
+                    "expr": "sum by (country_name) (sum_over_time(loki_nginx_requests_total_by_country{project=~\"$project\", vps=~\"$vps\"}[$__range]))",
                     "format": "table",
                     "instant": true,
                     "legendFormat": "Total Requests"
                 },
                 {
                     "refId": "B",
-	                    "expr": "sum by (country_name) (sum_over_time(loki_nginx_requests_total_by_country{project=~\"$project\", vps=~\"$vps\", resp_code=~\"2..\"}[$__range])) or sum by (country_name) (sum_over_time(loki_nginx_requests_total_by_country{project=~\"$project\", vps=~\"$vps\"}[$__range])) * 0",
+                    "expr": "sum by (country_name) (sum_over_time(loki_nginx_requests_total_by_country{project=~\"$project\", vps=~\"$vps\", resp_code=~\"2..\"}[$__range])) or sum by (country_name) (sum_over_time(loki_nginx_requests_total_by_country{project=~\"$project\", vps=~\"$vps\"}[$__range])) * 0",
                     "format": "table",
                     "instant": true,
                     "legendFormat": "Success (2xx)"
                 },
                 {
                     "refId": "C",
-	                    "expr": "sum by (country_name) (sum_over_time(loki_nginx_requests_total_by_country{project=~\"$project\", vps=~\"$vps\", resp_code=~\"3..\"}[$__range])) or sum by (country_name) (sum_over_time(loki_nginx_requests_total_by_country{project=~\"$project\", vps=~\"$vps\"}[$__range])) * 0",
+                    "expr": "sum by (country_name) (sum_over_time(loki_nginx_requests_total_by_country{project=~\"$project\", vps=~\"$vps\", resp_code=~\"3..\"}[$__range])) or sum by (country_name) (sum_over_time(loki_nginx_requests_total_by_country{project=~\"$project\", vps=~\"$vps\"}[$__range])) * 0",
                     "format": "table",
                     "instant": true,
                     "legendFormat": "Redirect (3xx)"
                 },
                 {
                     "refId": "D",
-	                    "expr": "sum by (country_name) (sum_over_time(loki_nginx_requests_total_by_country{project=~\"$project\", vps=~\"$vps\", resp_code=~\"4..\"}[$__range])) or sum by (country_name) (sum_over_time(loki_nginx_requests_total_by_country{project=~\"$project\", vps=~\"$vps\"}[$__range])) * 0",
+                    "expr": "sum by (country_name) (sum_over_time(loki_nginx_requests_total_by_country{project=~\"$project\", vps=~\"$vps\", resp_code=~\"4..\"}[$__range])) or sum by (country_name) (sum_over_time(loki_nginx_requests_total_by_country{project=~\"$project\", vps=~\"$vps\"}[$__range])) * 0",
                     "format": "table",
                     "instant": true,
                     "legendFormat": "Client Error (4xx)"
                 },
                 {
                     "refId": "E",
-	                    "expr": "sum by (country_name) (sum_over_time(loki_nginx_requests_total_by_country{project=~\"$project\", vps=~\"$vps\", resp_code=~\"5..\"}[$__range])) or sum by (country_name) (sum_over_time(loki_nginx_requests_total_by_country{project=~\"$project\", vps=~\"$vps\"}[$__range])) * 0",
+                    "expr": "sum by (country_name) (sum_over_time(loki_nginx_requests_total_by_country{project=~\"$project\", vps=~\"$vps\", resp_code=~\"5..\"}[$__range])) or sum by (country_name) (sum_over_time(loki_nginx_requests_total_by_country{project=~\"$project\", vps=~\"$vps\"}[$__range])) * 0",
                     "format": "table",
                     "instant": true,
                     "legendFormat": "Server Error (5xx)"
@@ -1511,75 +1511,81 @@
         "loki",
         "requests",
         "api",
-        "observability"
+        "observability",
+        "cross"
     ],
-	    "templating": {
-	        "list": [
-	            {
-	                "name": "project",
-	                "label": "Project",
-	                "type": "query",
-	                "datasource": {
-	                    "type": "prometheus",
-	                    "uid": "prometheus"
-	                },
-	                "definition": "label_values(loki_nginx_requests_rate, project)",
-	                "query": {
-	                    "query": "label_values(loki_nginx_requests_rate, project)",
-	                    "refId": "PrometheusVariableQueryEditor-VariableQuery"
-	                },
-	                "refresh": 1,
-	                "multi": true,
-	                "includeAll": true,
-	                "allValue": ".*",
-	                "current": {
-	                    "selected": true,
-	                    "text": [
-	                        "All"
-	                    ],
-	                    "value": [
-	                        "$__all"
-	                    ]
-	                },
-	                "sort": 1
-	            },
-	            {
-	                "name": "vps",
-	                "label": "VPS",
-	                "type": "query",
-	                "datasource": {
-	                    "type": "prometheus",
-	                    "uid": "prometheus"
-	                },
-	                "definition": "label_values(loki_nginx_requests_rate{project=~\"$project\"}, vps)",
-	                "query": {
-	                    "query": "label_values(loki_nginx_requests_rate{project=~\"$project\"}, vps)",
-	                    "refId": "PrometheusVariableQueryEditor-VariableQuery"
-	                },
-	                "refresh": 1,
-	                "multi": false,
-	                "includeAll": true,
-	                "allValue": ".*",
-	                "current": {
-	                    "selected": true,
-	                    "text": "All",
-	                    "value": "$__all"
-	                },
-	                "sort": 1
-	            },
-	            {
-	                "name": "resp_code",
-	                "label": "Response Code",
-	                "type": "query",
+    "templating": {
+        "list": [
+            {
+                "name": "project",
+                "label": "Project",
+                "type": "constant",
+                "definition": "cross",
+                "query": "cross",
+                "refresh": 0,
+                "multi": false,
+                "includeAll": false,
+                "current": {
+                    "selected": true,
+                    "text": "cross",
+                    "value": "cross"
+                },
+                "sort": 1,
+                "hide": 2,
+                "skipUrlSync": true,
+                "options": [
+                    {
+                        "selected": true,
+                        "text": "cross",
+                        "value": "cross"
+                    }
+                ]
+            },
+            {
+                "name": "vps",
+                "label": "VPS",
+                "type": "query",
                 "datasource": {
                     "type": "prometheus",
                     "uid": "prometheus"
                 },
-	                "definition": "label_values(loki_nginx_requests_rate{project=~\"$project\", vps=~\"$vps\"}, resp_code)",
-	                "query": {
-	                    "query": "label_values(loki_nginx_requests_rate{project=~\"$project\", vps=~\"$vps\"}, resp_code)",
-	                    "refId": "PrometheusVariableQueryEditor-VariableQuery"
-	                },
+                "definition": "label_values(loki_nginx_requests_rate{project=~\"$project\"}, vps)",
+                "query": {
+                    "query": "label_values(loki_nginx_requests_rate{project=~\"$project\"}, vps)",
+                    "refId": "PrometheusVariableQueryEditor-VariableQuery"
+                },
+                "refresh": 1,
+                "multi": false,
+                "includeAll": false,
+                "current": {
+                    "selected": true,
+                    "text": "cross-api-1-ubuntu-c-2-sgp1-01",
+                    "value": "cross-api-1-ubuntu-c-2-sgp1-01"
+                },
+                "sort": 1,
+                "hide": 0,
+                "skipUrlSync": false,
+                "options": [
+                    {
+                        "selected": true,
+                        "text": "cross-api-1-ubuntu-c-2-sgp1-01",
+                        "value": "cross-api-1-ubuntu-c-2-sgp1-01"
+                    }
+                ]
+            },
+            {
+                "name": "resp_code",
+                "label": "Response Code",
+                "type": "query",
+                "datasource": {
+                    "type": "prometheus",
+                    "uid": "prometheus"
+                },
+                "definition": "label_values(loki_nginx_requests_rate{project=~\"$project\", vps=~\"$vps\"}, resp_code)",
+                "query": {
+                    "query": "label_values(loki_nginx_requests_rate{project=~\"$project\", vps=~\"$vps\"}, resp_code)",
+                    "refId": "PrometheusVariableQueryEditor-VariableQuery"
+                },
                 "refresh": 1,
                 "multi": true,
                 "includeAll": true,
@@ -1656,8 +1662,8 @@
         ]
     },
     "timezone": "",
-    "title": "API",
-    "uid": "nginx-api-observability",
+    "title": "[cross] API",
+    "uid": "cross-nginx-api-ob-189415add5",
     "version": 1,
     "weekStart": ""
 }

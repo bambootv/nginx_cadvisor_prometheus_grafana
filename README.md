@@ -139,10 +139,39 @@ Ví dụ:
 http://qr_code_production_backend:3000
 ```
 
-6. Nếu muốn có dashboard folder riêng cho project:
+6. Nếu muốn tạo dashboard cho project:
 
 ```bash
 make dashboards_project PROJECT=qr_code VPS=vps-qr-code
+```
+
+Quy ước:
+
+- `PROJECT` phải là **stack name** khi deploy bằng `docker stack deploy`
+- mỗi `project` chỉ có **1 bộ dashboard** trong folder của project đó
+- nếu truyền `VPS`, repo **không đổi tên file dashboard**
+- `VPS` chỉ dùng để đặt giá trị mặc định cho biến lọc `vps`
+- dashboard sẽ mở ra với `vps` mặc định là máy đó và không dùng `All`
+- sau khi mở dashboard, bạn vẫn có thể đổi sang VPS khác trong cùng project ngay trên filter Grafana
+
+Ví dụ một project `cross` chạy trên 2 VPS:
+
+```bash
+make dashboards_project PROJECT=cross VPS=cross-api-sgp1-01
+```
+
+Khi đó dashboard nằm chung trong:
+
+```text
+central/dashboards/projects/cross/
+```
+
+và file vẫn giữ tên chuẩn theo project, ví dụ:
+
+```text
+system_monitoring.json
+container_logs_dashboard.json
+nginx_api_observability.json
 ```
 
 7. Reload Grafana ở Central nếu vừa thêm dashboard:

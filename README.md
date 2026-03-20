@@ -3,7 +3,7 @@
 Repo này dùng cho mô hình nhiều VPS với Docker Swarm:
 
 - **Common VPS**: chạy `Nginx + Grafana Alloy`
-- **Central VPS**: chạy `Grafana + Prometheus + Loki + cloudflared`
+- **Central VPS**: chạy `Grafana + Prometheus + Loki + Alloy + cloudflared`
 - **Ingress network dùng chung**: `nginx_gateway_net`
 - **Common VPS** đẩy metrics/logs về **Central VPS** qua IP Tailscale
 
@@ -63,6 +63,7 @@ docker stack services monitoring_central
 docker service logs -f monitoring_central_grafana
 docker service logs -f monitoring_central_prometheus
 docker service logs -f monitoring_central_loki
+docker service logs -f monitoring_central_alloy
 docker service logs -f monitoring_central_cloudflared
 ```
 
@@ -247,6 +248,12 @@ make deploy_common
 make deploy_central_grafana
 ```
 
+### Update Alloy trên Central
+
+```bash
+make deploy_central_alloy
+```
+
 ### Update Cloudflare Tunnel service
 
 ```bash
@@ -290,6 +297,7 @@ make stack_central
 make deploy_common_nginx
 make deploy_common_alloy
 make deploy_central_grafana
+make deploy_central_alloy
 make deploy_central_cloudflared
 make dashboards_project PROJECT=my_stack
 make dashboards_sync_all
@@ -301,6 +309,7 @@ make dashboards_sync_all
   - dùng `make deploy_common_nginx`
   - dùng `make deploy_common_alloy`
   - dùng `make deploy_central_grafana`
+  - dùng `make deploy_central_alloy`
   - dùng `make deploy_central_cloudflared`
 - Đổi compose-level như network, mount, port, env, replicas:
   - dùng `make deploy_common`

@@ -1,4 +1,4 @@
-.PHONY: swarm gateway_network check_cf_tunnel_secret stack_central stack_common deploy_central deploy_common deploy_common_nginx deploy_common_alloy deploy_central_grafana deploy_central_cloudflared dashboards_project dashboards_sync_all
+.PHONY: swarm gateway_network check_cf_tunnel_secret stack_central stack_common deploy_central deploy_common deploy_common_nginx deploy_common_alloy deploy_central_grafana deploy_central_alloy deploy_central_cloudflared dashboards_project dashboards_sync_all
 
 # ==============================================================================
 # COMMON COMMANDS
@@ -44,6 +44,11 @@ deploy_central_grafana:
 	# Chỉ force rolling update service grafana hien tai.
 	# Khong ap dung cho thay doi compose nhu network/mount/ports.
 	docker service update --force monitoring_central_grafana
+
+deploy_central_alloy:
+	# Chỉ force rolling update service alloy hien tai.
+	# Khong ap dung cho thay doi compose nhu network/mount/ports.
+	docker service update --force monitoring_central_alloy
 
 deploy_central_cloudflared:
 	# Chỉ force rolling update service cloudflared hien tai.

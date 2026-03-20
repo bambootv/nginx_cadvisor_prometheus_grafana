@@ -78,6 +78,43 @@ services:
           cpus: '2.0'
           memory: 4G
 
+  alloy:
+    image: grafana/alloy:v1.14.0
+    env_file:
+      - .env
+    environment:
+      - CENTRAL_PROM_URL=http://prometheus:9090/api/v1/write
+      - CENTRAL_LOKI_URL=http://loki:3102/loki/api/v1/push
+    volumes:
+      - ./common/alloy/config.alloy:/etc/alloy/config.alloy:ro
+      - ./common/alloy/geoip:/etc/alloy/geoip:ro
+      - alloy_data:/var/lib/alloy
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/host/root:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /run/containerd:/run/containerd:ro
+      - /:/rootfs:ro
+      - /sys:/sys:ro
+      - /var/lib/docker:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+      - /sys/fs/cgroup:/sys/fs/cgroup:ro
+    command:
+      - run
+      - /etc/alloy/config.alloy
+      - --server.http.listen-addr=0.0.0.0:12345
+      - --storage.path=/var/lib/alloy/data
+    networks:
+      - monitoring_swarm_central
+    privileged: true
+    deploy:
+      <<: *deploy_config
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 2G
+
   cloudflared:
     image: cloudflare/cloudflared:2026.3.0
     command: tunnel --no-autoupdate run --token-file /run/secrets/cf_tunnel_token
@@ -96,6 +133,7 @@ volumes:
   loki_data:
   loki_rules_storage:
   grafana_data:
+  alloy_data:
 
 secrets:
   cf_tunnel_token:

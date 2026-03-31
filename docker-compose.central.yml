@@ -60,7 +60,7 @@ services:
           memory: 4G
 
   grafana:
-    image: grafana/grafana:11.5.2
+    image: grafana/grafana:12.3.6-security-01-ubuntu
     env_file:
       - .env
     environment:

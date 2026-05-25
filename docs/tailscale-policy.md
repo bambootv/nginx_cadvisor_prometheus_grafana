@@ -7,7 +7,25 @@ Tài liệu này viết gọn cho đúng mô hình bạn đang dùng:
 - mỗi Common VPS gửi logs/metrics về Central qua **Tailscale**
 - không bàn sâu chuyện admin SSH vì đó không phải nhu cầu chính ở đây
 
-## 1. Mô hình bạn đang làm là gì
+## 1. Nếu chưa biết Tailscale là gì
+
+Tailscale có thể hiểu đơn giản là mạng riêng cho các máy chủ của bạn.
+
+Khi Central VPS và các Common VPS cùng join vào một tailnet:
+
+- mỗi VPS có thêm một IP Tailscale riêng, thường có dạng `100.x.y.z`
+- các VPS có thể gọi nhau qua IP này như đang ở cùng private network
+- traffic giữa các VPS được Tailscale mã hóa
+
+Trong repo này, Tailscale chỉ làm nhiệm vụ đường mạng:
+
+```text
+Common Alloy -> IP Tailscale của Central -> Prometheus/Loki
+```
+
+Nó không đọc metrics, không đọc logs, và không thay thế Docker network. Alloy mới là agent đọc dữ liệu; Prometheus/Loki mới là nơi nhận dữ liệu.
+
+## 2. Mô hình bạn đang làm là gì
 
 Bạn tạo một **tailnet Tailscale**, rồi cho:
 
@@ -21,10 +39,10 @@ Sau đó:
 
 Trong repo này, chỗ đó nằm ở:
 
-- [`.env.example`](/Users/ducpt/WorkSpace/nginx_cadvisor_prometheus_grafana/.env.example)
+- [`.env.example`](../.env.example)
   - `CENTRAL_PROM_URL=http://CENTRAL_TAILSCALE_IP:9090/api/v1/write`
   - `CENTRAL_LOKI_URL=http://CENTRAL_TAILSCALE_IP:3102/loki/api/v1/push`
-- [`common/alloy/config.alloy`](/Users/ducpt/WorkSpace/nginx_cadvisor_prometheus_grafana/common/alloy/config.alloy)
+- [`common/alloy/config.alloy`](../common/alloy/config.alloy)
   - Alloy đọc 2 biến env này để đẩy metrics/logs về Central
 
 Hiểu đơn giản:
@@ -33,7 +51,7 @@ Hiểu đơn giản:
 Common VPS -> Tailscale -> Central VPS
 ```
 
-## 2. Sơ đồ kiến trúc nên dùng
+## 3. Sơ đồ kiến trúc nên dùng
 
 ```mermaid
 flowchart LR
@@ -67,7 +85,7 @@ flowchart LR
 - Common VPS chỉ cần nói chuyện với Central
 - Central là điểm thu thập tập trung
 
-## 3. Cái gì là an toàn, cái gì là rủi ro
+## 4. Cái gì là an toàn, cái gì là rủi ro
 
 ### Điều an toàn
 
@@ -88,7 +106,7 @@ Nếu một Common VPS bị hack:
 - nếu node đó chỉ được gửi tới Central ở vài port cố định thì phạm vi hại sẽ nhỏ
 - nếu node đó được nói chuyện tới mọi node, mọi port thì rủi ro sẽ lớn
 
-## 4. Chốt kiến trúc an toàn cho case này
+## 5. Chốt kiến trúc an toàn cho case này
 
 Bạn nên chốt như sau:
 
@@ -106,7 +124,7 @@ Nói ngắn gọn:
 
 > Common chỉ được đẩy monitoring về Central, không được đi ngang sang máy khác.
 
-## 5. Cách làm thực tế
+## 6. Cách làm thực tế
 
 ### Bước 1: Tạo tailnet
 
@@ -166,7 +184,7 @@ Trên Central VPS:
 
 Repo hiện tại đã map:
 
-- [`docker-compose.central.yml`](/Users/ducpt/WorkSpace/nginx_cadvisor_prometheus_grafana/docker-compose.central.yml)
+- [`docker-compose.central.yml`](../docker-compose.central.yml)
   - `9090:9090`
   - `3102:3102`
 
@@ -184,7 +202,7 @@ Alloy sẽ đọc:
 
 rồi đẩy data về Central.
 
-## 6. Checklist ngắn để an toàn
+## 7. Checklist ngắn để an toàn
 
 - [ ] Central VPS có Tailscale
 - [ ] Mỗi Common VPS có Tailscale
@@ -193,7 +211,7 @@ rồi đẩy data về Central.
 - [ ] Không cho Common nói chuyện với nhau
 - [ ] `.env` trên Common trỏ tới IP Tailscale của Central
 
-## 6.1 Mẫu policy Tailscale cho case này
+## 8. Mẫu policy Tailscale cho case này
 
 Đây là mẫu policy ngắn, đúng với nhu cầu hiện tại:
 
@@ -249,7 +267,7 @@ Hiểu ngắn gọn:
 - Common chủ động gửi data về Central
 - ngoài 2 port monitoring ra thì deny
 
-## 7. Khi nào mô hình này ổn
+## 9. Khi nào mô hình này ổn
 
 Mô hình này rất hợp nếu mục tiêu là:
 
@@ -257,7 +275,7 @@ Mô hình này rất hợp nếu mục tiêu là:
 - không muốn mở kết nối public giữa các VPS
 - muốn triển khai đơn giản hơn full mesh VPN thủ công
 
-## 8. Khi nào cần cẩn thận hơn
+## 10. Khi nào cần cẩn thận hơn
 
 Bạn cần cẩn thận hơn nếu:
 
@@ -266,7 +284,7 @@ Bạn cần cẩn thận hơn nếu:
 - để Common VPS nói chuyện được với nhau
 - sau này thêm subnet router mà không kiểm soát kỹ
 
-## 9. Kết luận
+## 11. Kết luận
 
 Với case của bạn, cách dùng Tailscale đúng là:
 
@@ -280,7 +298,7 @@ Chốt gọn:
 - điều quan trọng nhất là:  
   **Common chỉ được tới Central ở đúng các port cần thiết**
 
-## Tài liệu chính thức
+## 12. Tài liệu chính thức
 
 - Control/data planes: https://tailscale.com/docs/concepts/control-data-planes
 - Access control: https://tailscale.com/docs/features/access-control

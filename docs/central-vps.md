@@ -1,6 +1,6 @@
 # Trên Central VPS
 
-Central VPS chạy stack `monitoring_central`: **Prometheus + Loki + Grafana + Alloy + cloudflared**. Đây là nơi tập trung nhận metrics/logs từ các Common VPS và hiển thị dashboard.
+Central VPS chạy stack `monitoring_central`: **PostgreSQL + Prometheus + Loki + Grafana + Alloy + cloudflared**. Đây là nơi tập trung nhận metrics/logs từ các Common VPS và hiển thị dashboard.
 
 Tài liệu này hướng dẫn mọi việc cần làm **trên máy Central VPS**, theo thứ tự:
 
@@ -36,7 +36,7 @@ make swarm
 make gateway_network
 ```
 
-Sửa `.env`:
+Sửa `.env` (minimum để Central chạy):
 
 ```env
 VPS_NAME=<ten-central-vps>
@@ -45,9 +45,29 @@ GF_SECURITY_ADMIN_PASSWORD=<password>
 GF_SERVER_DOMAIN=<grafana.tenmien.com>
 GF_SERVER_ROOT_URL=https://<grafana.tenmien.com>
 GF_SERVER_ENFORCE_DOMAIN=true
+
+# Grafana metadata DB (user/team/folder permission)
+POSTGRES_DB=grafana
+POSTGRES_USER=grafana
+POSTGRES_PASSWORD=<postgres-password>
+GF_DATABASE_TYPE=postgres
+GF_DATABASE_HOST=postgres:5432
+GF_DATABASE_NAME=grafana
+GF_DATABASE_USER=grafana
+GF_DATABASE_PASSWORD=<postgres-password>
+GF_DATABASE_SSL_MODE=disable
 ```
 
 Không cần set `CENTRAL_PROM_URL` / `CENTRAL_LOKI_URL` ở Central — [`docker-compose.central.yml`](../docker-compose.central.yml) đã override 2 biến này thành DNS nội bộ (`http://prometheus:9090/...`, `http://loki:3102/...`).
+
+PostgreSQL ở đây là DB metadata của Grafana: user, team, folder permission, session, dashboard metadata. Metrics vẫn nằm ở Prometheus; logs vẫn nằm ở Loki.
+
+Các config thêm (optional, xem doc riêng để có env đầy đủ):
+
+| Mục đích | Doc |
+|---|---|
+| PM đăng nhập bằng Google/Gmail công ty | [`grafana-google-oauth.md`](grafana-google-oauth.md) |
+| Phân quyền PM theo project (team + folder) | [`grafana-project-permissions.md`](grafana-project-permissions.md) |
 
 ## 3. Tạo Docker secret cho Cloudflare Tunnel
 
@@ -82,6 +102,7 @@ Mở Grafana qua domain Cloudflare Tunnel (vd `https://grafana.tenmien.com`). Đ
 Sau khi setup xong:
 
 - Grafana chạy nội bộ ở `grafana:3000`, public qua Cloudflare Tunnel
+- PostgreSQL chạy nội bộ ở `postgres:5432`, không publish ra host
 - Prometheus nhận `remote_write` ở `:9090` (qua Tailscale)
 - Loki nhận push logs ở `:3102` (qua Tailscale)
 
@@ -107,7 +128,7 @@ Quy ước:
 - `VPS` là tuỳ chọn, dùng để default filter `vps` trên dashboard.
 - Mỗi project có **1 bộ** dashboard (3 file: API, Logs, System) trong `central/dashboards/projects/<TEN_STACK>/`.
 
-Khi sửa template chung (`central/dashboards/projects/_all/`), sync lại tất cả project hiện có:
+Khi sửa template chung (`central/dashboards/templates/_all/`), sync lại tất cả project hiện có:
 
 ```bash
 make dashboards_sync_all

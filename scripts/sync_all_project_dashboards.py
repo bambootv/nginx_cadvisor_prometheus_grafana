@@ -69,7 +69,7 @@ def main() -> int:
 
     dashboard_files = sorted(
         path for path in projects_root.rglob("*.json")
-        if path.parent.name != "_all" and not any(part.startswith(".") for part in path.parts)
+        if not any(part.startswith(".") for part in path.parts)
     )
 
     if not dashboard_files:

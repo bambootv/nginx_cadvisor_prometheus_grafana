@@ -100,7 +100,7 @@ def generate_project_dashboards(project: str, vps: str = "", overwrite: bool = F
         return 2
 
     repo_root = Path(__file__).resolve().parents[1]
-    templates_dir = repo_root / "central" / "dashboards" / "projects" / "_all"
+    templates_dir = repo_root / "central" / "dashboards" / "templates" / "_all"
     out_dir = repo_root / "central" / "dashboards" / "projects" / project
 
     if not templates_dir.is_dir():
@@ -150,7 +150,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
             "Generate per-project Grafana dashboards from the templates in "
-            "central/dashboards/projects/_all. When --vps is provided, the project "
+            "central/dashboards/templates/_all. When --vps is provided, the project "
             "dashboards still keep the same filenames and titles, but the VPS filter "
             "defaults to that VPS and does not expose All."
         )

@@ -150,6 +150,7 @@ Central VPS chạy stack `monitoring_central` từ [`docker-compose.central.yml`
 
 ```text
 monitoring_central
+├── postgres
 ├── prometheus
 ├── loki
 ├── grafana
@@ -248,7 +249,57 @@ Provisioning:
   - `Loki` → `http://loki:3102`
 - Dashboard [`central/grafana/provisioning/dashboards/dashboards.yml`](../central/grafana/provisioning/dashboards/dashboards.yml) trỏ vào folder `central/dashboards/projects` với `foldersFromFilesStructure: true` → mỗi project thành 1 folder trong Grafana.
 
-### 2.4. Central Alloy
+Metadata của Grafana không lưu trong Prometheus/Loki. Khi dùng cấu hình hiện tại:
+
+```text
+Grafana -> PostgreSQL postgres:5432
+```
+
+Các dữ liệu sau nằm trong PostgreSQL:
+
+- user / team / team member
+- folder permission
+- session / preference / Grafana setting
+- dashboard metadata do Grafana quản lý
+
+Dashboard source vẫn là JSON trong repo ở `central/dashboards/projects/<project>/`. Metrics nằm ở Prometheus; logs nằm ở Loki.
+
+### 2.4. PostgreSQL
+
+PostgreSQL là DB metadata riêng cho Grafana.
+
+Compose:
+
+- Image `postgres:16-alpine`
+- Join `monitoring_swarm_central`
+- Volume `grafana_postgres_data`
+- Không publish port host
+
+PostgreSQL chỉ phục vụ Grafana nội bộ qua Docker DNS:
+
+```text
+postgres:5432
+```
+
+Các biến liên quan nằm trong `.env`:
+
+```env
+POSTGRES_DB=grafana
+POSTGRES_USER=grafana
+POSTGRES_PASSWORD=...
+GF_DATABASE_TYPE=postgres
+GF_DATABASE_HOST=postgres:5432
+GF_DATABASE_NAME=grafana
+GF_DATABASE_USER=grafana
+GF_DATABASE_PASSWORD=...
+GF_DATABASE_SSL_MODE=disable
+```
+
+Hai nhóm biến trên phải dùng cùng database name/user/password. PostgreSQL đọc nhóm `POSTGRES_*`, còn Grafana đọc nhóm `GF_DATABASE_*`.
+
+Nếu mất volume `grafana_postgres_data`, user/team/folder permission tạo trong Grafana UI sẽ mất. Vì vậy volume này cần được backup nếu đã phân quyền PM.
+
+### 2.5. Central Alloy
 
 Central cũng chạy Alloy để collect metrics/logs của chính Central VPS (CPU/RAM/disk của Prometheus, Loki, Grafana, ...).
 
@@ -263,7 +314,7 @@ Vì Central Alloy ở cùng network `monitoring_swarm_central` với Prometheus/
 
 **Đừng sửa `CENTRAL_PROM_URL`/`CENTRAL_LOKI_URL` ở `.env` của Central**: compose đã override nên giá trị trong `.env` bị bỏ qua.
 
-### 2.5. cloudflared
+### 2.6. cloudflared
 
 `cloudflared` đưa Grafana ra Internet qua Cloudflare Tunnel.
 
@@ -291,7 +342,7 @@ Chi tiết setup, Cloudflare Access, rotate token: xem [`cloudflare-tunnel-grafa
 | `monitoring_swarm_common` | `monitoring_common_nginx`, `monitoring_common_alloy` | Network nội bộ stack Common | Route app public |
 | `nginx_gateway_net` | Common Nginx + service app public | Nginx gọi app bằng `http://<stack>_<service>:<port>` | DB, Redis, worker, Alloy |
 | Project private network | App + DB + Redis + worker của project | Giao tiếp nội bộ project | Public ingress |
-| `monitoring_swarm_central` | Prometheus, Loki, Grafana, Alloy, cloudflared | Giao tiếp nội bộ Central stack | Common VPS gọi bằng Docker DNS |
+| `monitoring_swarm_central` | PostgreSQL, Prometheus, Loki, Grafana, Alloy, cloudflared | Giao tiếp nội bộ Central stack | Common VPS gọi bằng Docker DNS |
 | Tailscale tailnet | Common host → Central host | Common Alloy đẩy metrics/logs về Central | Nginx gọi app |
 | Cloudflare Tunnel | Admin → Cloudflare → cloudflared → Grafana | Public Grafana an toàn hơn publish `3000` | Prometheus/Loki ingest |
 
@@ -461,7 +512,7 @@ Ngoài histogram này, Loki **ruler** trên Central tạo thêm 4 metric `loki_n
 
 ### 7.1. Templates
 
-3 dashboard template trong [`central/dashboards/projects/_all/`](../central/dashboards/projects/_all):
+3 dashboard template trong [`central/dashboards/templates/_all/`](../central/dashboards/templates/_all):
 
 | File | Nguồn dữ liệu | Dùng để |
 |---|---|---|
@@ -482,7 +533,7 @@ Nếu 2 nguồn này lệch (vd stack name là `qr_code` nhưng Nginx set `set $
 
 `make dashboards_project PROJECT=qr_code VPS=vps-app-01` chạy [`scripts/new_project_dashboards.py`](../scripts/new_project_dashboards.py). Script làm 5 việc:
 
-1. Copy 3 dashboard template từ `central/dashboards/projects/_all`.
+1. Copy 3 dashboard template từ `central/dashboards/templates/_all`.
 2. Ghi vào `central/dashboards/projects/qr_code/`.
 3. Prefix title: `[qr_code] API`, `[qr_code] Logs`, `[qr_code] Operating System`.
 4. Khoá biến `project` thành constant hidden `qr_code` (dashboard không thể đổi sang project khác).

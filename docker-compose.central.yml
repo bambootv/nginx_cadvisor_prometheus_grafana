@@ -16,6 +16,21 @@ x-deploy: &deploy_config
     window: 5s
 
 services:
+  postgres:
+    image: postgres:16-alpine
+    env_file:
+      - .env
+    volumes:
+      - grafana_postgres_data:/var/lib/postgresql/data
+    networks:
+      - monitoring_swarm_central
+    deploy:
+      <<: *deploy_config
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+
   prometheus:
     image: prom/prometheus:v3.7.3
     ports:
@@ -132,6 +147,7 @@ volumes:
   prometheus_data:
   loki_data:
   loki_rules_storage:
+  grafana_postgres_data:
   grafana_data:
   alloy_data:
 
